@@ -1,0 +1,37 @@
+{
+  "name": "whatsapp-bot-sst",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "npx sst dev"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.726.1",
+    "@aws-sdk/client-s3": "^3.731.1",
+    "@aws-sdk/lib-dynamodb": "^3.726.1",
+    "axios": "^1.7.9",
+    "body-parser": "^1.20.3",
+    "dotenv": "^16.4.7",
+    "dynamodb-toolbox": "^1.14.5",
+    "express": "^4.21.2",
+    "google-auth-library": "^9.15.0",
+    "serverless-http": "^3.2.0",
+    "sst": "^3.5.8",
+    "zod": "^3.24.1",
+    "zod-express-middleware": "^1.4.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@types/aws-lambda": "8.10.147",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.5",
+    "eslint": "^9.18.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0"
+  }
+}
