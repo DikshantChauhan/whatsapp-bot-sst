@@ -1,37 +1,76 @@
 import { Request, Response } from "express";
-import { Flow } from "../services/flow/typings";
-import s3Service from "../services/s3.service";
+import { flowService } from "../services/db/flow.service";
+import { errorResponse, successResponse } from "../utils";
 
-const postFlow = async (req: Request, res: Response) => {
-  const flow = req.body.flow as Flow;
+export default {
+  async postFlow(request: Request, response: Response) {
+    try {
+      const flow = await flowService.createAndValidate(request.body);
+      return successResponse(response, flow);
+    } catch (error) {
+      return errorResponse(response, error);
+    }
+  },
 
-  if (!flow) {
-    res.status(400).json({ message: "Flow is required" });
-    return;
-  }
+  async getFlow(request: Request, response: Response) {
+    try {
+      const { id } = request.params as {
+        id: string;
+      };
+      const flow = await flowService.get({ id });
+      return successResponse(response, flow);
+    } catch (error) {
+      return errorResponse(response, error);
+    }
+  },
 
-  if (!flow.name) {
-    res.status(400).json({ message: "Flow name is required" });
-    return;
-  }
-  if (!flow.data.nodes || !Array.isArray(flow.data.nodes)) {
-    res.status(400).json({ message: "Flow nodes must be an array" });
-    return;
-  }
-  if (!flow.data.edges || !Array.isArray(flow.data.edges)) {
-    res.status(400).json({ message: "Flow edges must be an array" });
-    return;
-  }
+  async updateFlow(_: Request, __: Response) {
+    // const { id } = request.params;
+    // const { type } = request.body as { type: FlowType };
+    // if (!id) {
+    //   response.status(400).json({ error: "Missing required fields" });
+    //   return;
+    // }
+    // if (type !== "level" && type !== "nudge") {
+    //   response.status(400).json({ error: "Missing required fields" });
+    //   return;
+    // }
+    // const flow = await flowService.update({
+    //   id,
+    //   type,
+    //   data: request.body.flow,
+    //   name: request.body.name,
+    // });
+    // if (!flow) {
+    //   response.status(400).json({ error: "flow not found" });
+    //   return;
+    // }
+    // response.send(flow);
+    // return;
+  },
 
-  await s3Service.postFlow(flow);
-  res.status(200).json({ message: "Flow posted successfully" });
-  return;
+  async getAllByType(request: Request, response: Response) {
+    try {
+      const { type } = request.params as {
+        type: string;
+      };
+      const result = await flowService.listByType(type);
+      return successResponse(response, result);
+    } catch (error) {
+      return errorResponse(response, error);
+    }
+  },
+
+  async delete(request: Request, response: Response) {
+    try {
+      const { id } = request.params as {
+        id: string;
+      };
+
+      const flow = await flowService.delete({ id });
+      return successResponse(response, flow);
+    } catch (error) {
+      return errorResponse(response, error);
+    }
+  },
 };
-
-const getFlows = async (_: Request, res: Response) => {
-  const flows = await s3Service.getAllFlows();
-  res.status(200).json(flows);
-  return;
-};
-
-export default { postFlow, getFlows };

@@ -1,58 +1,37 @@
 import { Entity, number, schema, string, Table, map } from "dynamodb-toolbox";
 import documentClient from "./config";
 import { Resource } from "sst";
-import { SubFlowValue } from "../services/flow/typings";
+
+const TABLE_NAME = Resource["whatsapp-bot-dev-dyno-user"].name;
 
 const table = new Table({
+  name: TABLE_NAME,
   partitionKey: {
-    name: "phoneNumber",
+    name: "phone_number",
     type: "string",
   },
-  name: Resource.DynoUser.name,
   documentClient,
 });
 
-const entity = new Entity({
-  table,
-  name: Resource.DynoUser.name,
-
-  schema: schema({
-    phoneNumber: string().key(),
-    sessionExpiresAt: number(),
-    name: string(),
-    flowId: string(),
-    validatorSubFlowId: string().optional(),
-
-    currentNodeId: string(),
-    currentNodeMeta: map({
-      delayWaitTill: number().optional(),
-    })
-      .optional()
-      .default({}),
-
-    nudgeSubFlowId: string().optional(),
-    nudgeNodeMeta: map({
-      delayWaitTill: number().optional(),
-    })
-      .optional()
-      .default({}),
-  }),
+const userEntitySchema = schema({
+  phone_number: string().key(),
+  name: string(),
+  level_id: string(),
+  node_id: string(),
+  node_meta: map({
+    delayWaitTill: number().optional(),
+  })
+    .optional()
+    .default({}),
+  nudge_id: string(),
+  session_expires_at: number(),
+  campaign_id: string(),
 });
 
-export interface User {
-  phoneNumber: string;
-  sessionExpiresAt: number;
-  name: string;
-  currentNodeId: string;
-  flowId: string;
-  nudgeSubFlowId?: SubFlowValue;
-  validatorSubFlowId?: SubFlowValue;
-  currentNodeMeta?: {
-    delayWaitTill?: number;
-  };
-  nudgeNodeMeta?: {
-    delayWaitTill?: number;
-  };
-}
+const userEntity = new Entity({
+  table,
+  name: TABLE_NAME,
+  schema: userEntitySchema,
+});
 
-export default { table, entity };
+export default { table, entity: userEntity };

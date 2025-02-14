@@ -1,20 +1,20 @@
 import {
+  $set,
+  DeleteItemCommand,
   Entity,
   GetItemCommand,
   KeyInputItem,
   PutItemCommand,
   PutItemInput,
+  ScanCommand,
   Table,
   UpdateItemCommand,
   UpdateItemInput,
-  ScanCommand,
-  DeleteItemCommand,
 } from "dynamodb-toolbox";
-import { User } from "../../db/user.db";
 
 export default class DbService<E extends Entity, T extends Table> {
-  private entity: E;
-  private table: T;
+  protected entity: E;
+  protected table: T;
 
   constructor(entity: E, table: T) {
     this.entity = entity;
@@ -33,24 +33,43 @@ export default class DbService<E extends Entity, T extends Table> {
   public async get(key: KeyInputItem<E>) {
     const { Item } = await this.entity.build(GetItemCommand).key(key).send();
 
-    return Item as User;
+    return Item;
   }
 
-  public async update(item: UpdateItemInput<E>, key: KeyInputItem<E>) {
-    await this.entity.build(UpdateItemCommand).item(item).send();
+  protected async update(item: UpdateItemInput<E>, key: KeyInputItem<E>) {
+    const transormedItems =
+      typeof item === "object"
+        ? Object.entries(item).reduce((acc, [key, value]) => {
+            if (typeof value === "object") {
+              return { ...acc, [key]: $set(value) };
+            }
+
+            return { ...acc, [key]: value };
+          }, {} as UpdateItemInput<E>)
+        : item;
+
+    await this.entity.build(UpdateItemCommand).item(transormedItems).send();
 
     const updatedItem = await this.get(key);
 
     return updatedItem;
   }
 
-  public async getAll() {
-    const { Items } = await this.entity.table.build(ScanCommand).send();
+  protected async scanAll() {
+    const { Items } = await this.table
+      .build(ScanCommand)
+      .entities(this.entity)
+      .send();
 
     return Items;
   }
 
   public async delete(key: KeyInputItem<E>) {
-    await this.entity.build(DeleteItemCommand).key(key).send();
+    const { $metadata } = await this.entity
+      .build(DeleteItemCommand)
+      .key(key)
+      .send();
+
+    return $metadata.httpStatusCode === 200;
   }
 }

@@ -10,11 +10,12 @@ export interface FlowData {
 }
 
 export interface Flow {
+  id: string;
   name: string;
-  type: "campaign" | "nudge" | "validator";
+  type: "level" | "nudge";
   data: FlowData;
-  subFlowsMap: SubFlowsMap;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface Edge {

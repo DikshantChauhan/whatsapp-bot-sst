@@ -10,34 +10,39 @@ export default $config({
     };
   },
   async run() {
-    const bucket = new sst.aws.Bucket("S3Bucket", {
-      access: "public",
-    });
-
-    // User Table
-    const userTable = new sst.aws.Dynamo("DynoUser", {
+    const userTable = new sst.aws.Dynamo("whatsapp-bot-dev-dyno-user", {
       fields: {
-        phoneNumber: "string",
+        phone_number: "string",
       },
-      primaryIndex: { hashKey: "phoneNumber" }, // Primary Index
+      primaryIndex: { hashKey: "phone_number" },
     });
 
-    // Activity Logs Table
-    // const activityLogsTable = new sst.aws.Dynamo("DynoActivityLogs", {
-    //   fields: {
-    //     userEmail: "string",
-    //     timestamp: "number",
-    //   },
-    //   primaryIndex: { hashKey: "userEmail", rangeKey: "timestamp" }, // Primary Index
-    // });
+    const campaignTable = new sst.aws.Dynamo("whatsapp-bot-dev-dyno-campaign", {
+      fields: {
+        id: "string",
+      },
+      primaryIndex: { hashKey: "id" },
+    });
+
+    const flowTable = new sst.aws.Dynamo("whatsapp-bot-dev-dyno-flow", {
+      fields: {
+        id: "string",
+        type: "string",
+      },
+      primaryIndex: { hashKey: "id" },
+      globalIndexes: {
+        byType: {
+          hashKey: "type",
+        }
+      }
+    });
 
     const api = new sst.aws.ApiGatewayV2("ApiGateway");
 
     const lambda = new sst.aws.Function("MainLambda", {
       handler: "src/index.handler",
       timeout: "30 seconds",
-      // link: [userTable, activityLogsTable, bucket],
-      link: [userTable, bucket],
+      link: [userTable, campaignTable, flowTable],
     });
 
     api.route("ANY /{proxy+}", lambda.arn);

@@ -9,17 +9,21 @@ declare module "sst" {
       "type": "sst.aws.ApiGatewayV2"
       "url": string
     }
-    "DynoUser": {
-      "name": string
-      "type": "sst.aws.Dynamo"
-    }
     "MainLambda": {
       "name": string
       "type": "sst.aws.Function"
     }
-    "S3Bucket": {
+    "whatsapp-bot-dev-dyno-campaign": {
       "name": string
-      "type": "sst.aws.Bucket"
+      "type": "sst.aws.Dynamo"
+    }
+    "whatsapp-bot-dev-dyno-flow": {
+      "name": string
+      "type": "sst.aws.Dynamo"
+    }
+    "whatsapp-bot-dev-dyno-user": {
+      "name": string
+      "type": "sst.aws.Dynamo"
     }
   }
 }
