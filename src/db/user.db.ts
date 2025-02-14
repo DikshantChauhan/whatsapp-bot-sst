@@ -10,7 +10,7 @@ import {
 import documentClient from "./config";
 import { Resource } from "sst";
 
-const TABLE_NAME = Resource["whatsapp-bot-dev-dyno-user"].name;
+const TABLE_NAME = Resource["whatsapp-bot-dev-user"].name;
 
 const table = new Table({
   name: TABLE_NAME,

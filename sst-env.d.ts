@@ -13,15 +13,15 @@ declare module "sst" {
       "name": string
       "type": "sst.aws.Function"
     }
-    "whatsapp-bot-dev-dyno-campaign": {
+    "whatsapp-bot-dev-campaign": {
       "name": string
       "type": "sst.aws.Dynamo"
     }
-    "whatsapp-bot-dev-dyno-flow": {
+    "whatsapp-bot-dev-flow": {
       "name": string
       "type": "sst.aws.Dynamo"
     }
-    "whatsapp-bot-dev-dyno-user": {
+    "whatsapp-bot-dev-user": {
       "name": string
       "type": "sst.aws.Dynamo"
     }

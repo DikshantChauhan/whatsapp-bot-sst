@@ -10,21 +10,21 @@ export default $config({
     };
   },
   async run() {
-    const userTable = new sst.aws.Dynamo("whatsapp-bot-dev-dyno-user", {
+    const userTable = new sst.aws.Dynamo("whatsapp-bot-dev-user", {
       fields: {
         phone_number: "string",
       },
       primaryIndex: { hashKey: "phone_number" },
     });
 
-    const campaignTable = new sst.aws.Dynamo("whatsapp-bot-dev-dyno-campaign", {
+    const campaignTable = new sst.aws.Dynamo("whatsapp-bot-dev-campaign", {
       fields: {
         id: "string",
       },
       primaryIndex: { hashKey: "id" },
     });
 
-    const flowTable = new sst.aws.Dynamo("whatsapp-bot-dev-dyno-flow", {
+    const flowTable = new sst.aws.Dynamo("whatsapp-bot-dev-flow", {
       fields: {
         id: "string",
         type: "string",
@@ -33,8 +33,8 @@ export default $config({
       globalIndexes: {
         byType: {
           hashKey: "type",
-        }
-      }
+        },
+      },
     });
 
     const api = new sst.aws.ApiGatewayV2("ApiGateway");

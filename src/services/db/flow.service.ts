@@ -40,23 +40,8 @@ class FlowService extends DbService<UE, UT> {
       name: z.string(),
       type: z.enum(FlowType),
       data: z.object({
-        nodes: z.array(
-          z.object({
-            id: z.string(),
-            type: z.string(),
-            nudge: z.string(),
-            data: z.record(z.string(), z.any()),
-          })
-        ),
-        edges: z.array(
-          z.object({
-            id: z.string(),
-            source: z.string(),
-            target: z.string(),
-            sourceHandle: z.string().optional(),
-            targetHandle: z.string().optional(),
-          })
-        ),
+        nodes: z.array(z.object(z.any())),
+        edges: z.array(z.object(z.any())),
       }),
       campaign_id: z.string().optional(),
       order: z.number().positive().optional(),

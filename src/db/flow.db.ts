@@ -11,7 +11,7 @@ import {
 import documentClient from "./config";
 import { Resource } from "sst";
 
-const TABLE_NAME = Resource["whatsapp-bot-dev-dyno-flow"].name;
+const TABLE_NAME = Resource["whatsapp-bot-dev-flow"].name;
 
 const table = new Table({
   name: TABLE_NAME,
@@ -37,23 +37,8 @@ const flowEntitySchema = schema({
   name: string(),
   type: string().enum(...FlowType),
   data: map({
-    nodes: list(
-      map({
-        id: string(),
-        type: string(),
-        data: any(),
-        nudge: string(),
-      })
-    ).default([]),
-    edges: list(
-      map({
-        id: string(),
-        source: string(),
-        target: string(),
-        sourceHandle: string().optional(),
-        targetHandle: string().optional(),
-      })
-    ).default([]),
+    nodes: list(map(any())).default([]),
+    edges: list(map(any())).default([]),
   }),
 });
 
