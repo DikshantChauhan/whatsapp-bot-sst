@@ -5,8 +5,8 @@ import { errorResponse, successResponse } from "../utils";
 export default {
   async postFlow(request: Request, response: Response) {
     try {
-      const flow = await flowService.createAndValidate(request.body);
-      return successResponse(response, flow);
+      const result = await flowService.createAndValidate(request.body);
+      return successResponse(response, result);
     } catch (error) {
       return errorResponse(response, error);
     }

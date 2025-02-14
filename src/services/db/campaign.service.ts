@@ -1,11 +1,7 @@
 import { z } from "zod";
-import campaignDb from "../../db/campaign.db";
+import campaignDb, { Campaign } from "../../db/campaign.db";
 import DbService from "./db.service";
-import {
-  UpdateItemInput,
-  PutItemInput,
-  KeyInputItem,
-} from "dynamodb-toolbox";
+import { PutItemInput, KeyInputItem } from "dynamodb-toolbox";
 import { generateDBId } from "../../utils";
 import { flowService } from "./flow.service";
 
@@ -17,14 +13,11 @@ class CampaignService extends DbService<E, T> {
     super(campaignDb.entity, campaignDb.table);
   }
 
-  public async updateAndValidate(payload: {
-    [K in keyof UpdateItemInput<E>]: Extract<
-      UpdateItemInput<E>[K],
-      string | number | boolean
-    >;
-  }) {
+  public async updateAndValidate(
+    id: string,
+    payload: Partial<Omit<Campaign, "id">>
+  ) {
     const result = await this.updateSchema().parseAsync(payload);
-    const { id } = payload;
 
     if (!(await this.get({ id }))) {
       throw new Error("Campaign not found");
@@ -72,7 +65,7 @@ class CampaignService extends DbService<E, T> {
 
     const levels = await Promise.all(
       campaign.levels.map(async (id) => {
-        const level = await flowService.get({ id, type: "level" });
+        const level = await flowService.get({ id });
         if (!level)
           throw new Error(`Level of id ${id} not found for campaign ${key.id}`);
 

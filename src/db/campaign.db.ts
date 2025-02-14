@@ -1,4 +1,11 @@
-import { Entity, schema, string, Table, list } from "dynamodb-toolbox";
+import {
+  Entity,
+  schema,
+  string,
+  Table,
+  list,
+  GetItemResponse,
+} from "dynamodb-toolbox";
 import documentClient from "./config";
 import { Resource } from "sst";
 
@@ -25,5 +32,10 @@ const campaignEntity = new Entity({
   name: TABLE_NAME,
   schema: campaignEntitySchema,
 });
+
+export type Campaign = Exclude<
+  GetItemResponse<typeof campaignEntity>["Item"],
+  undefined
+>;
 
 export default { table, entity: campaignEntity };

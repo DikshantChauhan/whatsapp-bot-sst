@@ -33,7 +33,10 @@ export default {
 
   async update(request: Request, response: Response) {
     try {
-      const campaign = await campaignService.updateAndValidate(request.body);
+      const campaign = await campaignService.updateAndValidate(
+        request.body.id,
+        request.body
+      );
       return successResponse(response, campaign);
     } catch (error) {
       return errorResponse(response, error);

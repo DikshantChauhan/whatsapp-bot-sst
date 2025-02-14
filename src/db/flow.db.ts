@@ -1,6 +1,7 @@
 import {
   any,
   Entity,
+  GetItemResponse,
   list,
   map,
   schema,
@@ -61,5 +62,10 @@ const flowEntity = new Entity({
   name: TABLE_NAME,
   schema: flowEntitySchema,
 });
+
+export type Flow = Exclude<
+  GetItemResponse<typeof flowEntity>["Item"],
+  undefined
+>;
 
 export default { table, entity: flowEntity };
