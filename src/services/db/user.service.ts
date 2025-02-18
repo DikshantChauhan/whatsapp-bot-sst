@@ -1,4 +1,4 @@
-import userDb from "../../db/user.db";
+import userDb, { User } from "../../db/user.db";
 import DbService from "./db.service";
 import { PutItemInput, UpdateItemInput } from "dynamodb-toolbox";
 import { z } from "zod";
@@ -11,18 +11,17 @@ class UserService extends DbService<UE, UT> {
     super(userDb.entity, userDb.table);
   }
 
-  public async update(payload: {
-    [K in keyof UpdateItemInput<UE>]: Extract<
-      UpdateItemInput<UE>[K],
-      string | number | boolean
-    >;
-  }) {
+  public async update(
+    payload: Partial<User> & { phone_number: string }
+  ): Promise<User> {
     const curr = await this.get({ phone_number: payload.phone_number });
     if (!curr) throw new Error("User not found");
 
     const update: UpdateItemInput<UE> = { ...payload };
 
-    return await super.update(update, { phone_number: payload.phone_number });
+    return (await super.update(update, {
+      phone_number: payload.phone_number,
+    }))!;
   }
 
   public async scanAll() {
@@ -51,7 +50,7 @@ class UserService extends DbService<UE, UT> {
     return result;
   }
 
-  public async createAndValidate(payload: PutItemInput<UE>) {
+  public async createAndValidate(payload: User) {
     const input = await this.putItemValidator(payload);
     const user = await this.insert(input);
 

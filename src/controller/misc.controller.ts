@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { flowService } from "../services/db/flow.service";
-import { errorResponse, successResponse } from "../utils";
+import { errorResponse, getDefaultUser, successResponse } from "../utils";
+import { userService } from "../services/db/user.service";
 
 const nudgeHandler = async (_: Request, __: Response) => {
   // const { phoneNumber } = request.body;
@@ -34,10 +34,12 @@ const nudgeHandler = async (_: Request, __: Response) => {
   // return;
 };
 
-const testHandler = async (_: Request, response: Response) => {
+const testHandler = async (request: Request, response: Response) => {
   try {
-    const result = await flowService.all();
-    return successResponse(response, result);
+    const { phoneNumber, name } = request.body;
+    const payload = await getDefaultUser(phoneNumber, name);
+    const user = await userService.update(payload);
+    return successResponse(response, user);
   } catch (error) {
     return errorResponse(response, error);
   }

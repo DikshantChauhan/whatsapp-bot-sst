@@ -39,6 +39,6 @@ app.put("/campaign", campaignController.update);
 // app.delete("/campaign/:id", campaignController.delete);
 
 //misc
-app.get("/test", miscController.testHandler);
+app.post("/test", miscController.testHandler);
 
 export const handler = serverless(app);

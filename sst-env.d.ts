@@ -21,6 +21,10 @@ declare module "sst" {
       "name": string
       "type": "sst.aws.Dynamo"
     }
+    "whatsapp-bot-dev-nudge": {
+      "name": string
+      "type": "sst.aws.Dynamo"
+    }
     "whatsapp-bot-dev-user": {
       "name": string
       "type": "sst.aws.Dynamo"

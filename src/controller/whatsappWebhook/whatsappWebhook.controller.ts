@@ -1,66 +1,77 @@
 import { Request, Response } from "express";
 import { Message, WhatsAppWebhookPayload } from "./webhook.typings";
 import { userService } from "../../services/db/user.service";
-import getFlowService from "../../services/flow/flow.service";
-import s3Service from "../../services/s3.service";
-import { AppNodeKey } from "../../services/flow/typings";
+import WalkFlowService from "../../services/walkFlow/walkFlow";
 import { whatsappMessagesService } from "../../services/whatsapp/messages.service";
 import { User } from "../../db/user.db";
+import { getDefaultUser } from "../../utils";
+import { flowService } from "../../services/db/flow.service";
 
-const getOrCreateUser = async (phoneNumber: string, name: string) => {
-  let user = await userService.get({ phoneNumber });
+const getOrCreateUser = async (phone_number: string, name: string) => {
+  let user = await userService.get({ phone_number });
 
   if (!user) {
-    const flow = await s3Service.getFlow(getFlowService.defaultFlowName);
-    if (!flow)
-      throw new Error(`Flow ${getFlowService.defaultFlowName} not found`);
-    const startNode = flow.data.nodes.find(
-      (node) => node.type === AppNodeKey.START_NODE_KEY
-    );
-    if (!startNode)
-      throw new Error(
-        `Start node not found in flow ${getFlowService.defaultFlowName}`
-      );
-
-    user = await userService.create({
-      phoneNumber,
-      name,
-      currentNodeId: startNode.id,
-      sessionExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
-      flowId: flow.name,
-    });
+    const payload = await getDefaultUser(phone_number, name);
+    user = await userService.createAndValidate(payload);
   }
   return user;
 };
 
-const handleMessageReply = async (
-  user: User,
-  message: Message,
-  flowService: Awaited<ReturnType<typeof getFlowService>>
-) => {
+const handleMessageReply = async (user: User, message: Message) => {
+  const flow = await flowService.getOrFail({ id: user.level_id });
+  const walkFlowService = new WalkFlowService(flow, user);
+
   switch (message.type) {
     case "text":
-      await flowService.walkFlow(message.text?.body);
+      await walkFlowService.walkFlow(message.text?.body);
       break;
 
     case "audio":
-      console.log("Audio message", message.audio);
+      const audioId = message.audio?.id;
+      audioId &&
+        (await whatsappMessagesService.sendMediaMessage(
+          user.phone_number,
+          "audio",
+          audioId,
+          "id",
+          audioId
+        ));
       break;
 
     case "image":
-      console.log("Image message", message.image);
+      const imageId = message.image?.id;
+      imageId &&
+        (await whatsappMessagesService.sendMediaMessage(
+          user.phone_number,
+          "image",
+          imageId,
+          "id",
+          imageId
+        ));
       break;
 
     case "video":
       const videoId = message.video?.id;
-      await whatsappMessagesService.sendTextMessage(
-        user.phoneNumber,
-        `Video-id: ${videoId}`
-      );
+      videoId &&
+        (await whatsappMessagesService.sendMediaMessage(
+          user.phone_number,
+          "video",
+          videoId,
+          "id",
+          videoId
+        ));
       break;
 
     case "document":
-      console.log("Document message", message.document);
+      const documentId = message.document?.id;
+      documentId &&
+        (await whatsappMessagesService.sendMediaMessage(
+          user.phone_number,
+          "document",
+          documentId,
+          "id",
+          documentId
+        ));
       break;
 
     case "sticker":
@@ -75,10 +86,10 @@ const handleMessageReply = async (
       }
       switch (interactive.type) {
         case "button_reply":
-          await flowService.walkFlow(interactive.button_reply?.title);
+          await walkFlowService.walkFlow(interactive.button_reply?.title);
           break;
         case "list_reply":
-          await flowService.walkFlow(interactive.list_reply?.title);
+          await walkFlowService.walkFlow(interactive.list_reply?.title);
           break;
       }
       break;
@@ -102,9 +113,7 @@ const webhookHandler = async (payload: WhatsAppWebhookPayload) => {
         if (!contact || !message) continue;
 
         const user = await getOrCreateUser(contact.wa_id, contact.profile.name);
-
-        const flowService = await getFlowService(user);
-        await handleMessageReply(user, message, flowService);
+        await handleMessageReply(user, message);
       }
     }
   }

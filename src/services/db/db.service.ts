@@ -11,6 +11,7 @@ import {
   UpdateItemCommand,
   UpdateItemInput,
 } from "dynamodb-toolbox";
+import { Flow } from "../walkFlow/typings";
 
 export default class DbService<E extends Entity, T extends Table> {
   protected entity: E;
@@ -71,5 +72,11 @@ export default class DbService<E extends Entity, T extends Table> {
       .send();
 
     return $metadata.httpStatusCode === 200;
+  }
+
+  public async getOrFail(key: KeyInputItem<E>) {
+    const item = await this.get(key);
+    if (!item) throw new Error("Item not found");
+    return item as Flow;
   }
 }

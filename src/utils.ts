@@ -1,6 +1,11 @@
 import { WHATSAPP_API_BASE_URL, PHONE_NUMBER_ID } from "./constants";
 import { Response } from "express";
 import { v4 as uuidv4 } from "uuid";
+import { User } from "./db/user.db";
+import { campaignService } from "./services/db/campaign.service";
+import { flowService } from "./services/db/flow.service";
+import NodeHandlerService from "./services/walkFlow/nodeHandler.service";
+import { Flow } from "./services/walkFlow/typings";
 export const getWhatsAppBaseURL = () => {
   return `${WHATSAPP_API_BASE_URL}/${PHONE_NUMBER_ID}/messages`;
 };
@@ -36,4 +41,33 @@ export const successResponse = (
 
 export const generateDBId = () => {
   return uuidv4();
+};
+
+export const getDefaultUser = async (
+  phone_number: string,
+  name: string
+): Promise<User> => {
+  const campaign_Id = "e1ea23a0-7fee-474f-8542-312b9d94b92a";
+  const campaign = await campaignService.getOrFail({ id: campaign_Id });
+  const level1 = campaign.levels[0];
+
+  if (!level1) throw new Error("Level 1 not found");
+
+  const flow = await flowService.getOrFail({ id: level1 });
+
+  const startNode = new NodeHandlerService(flow as Flow).getStartNode();
+
+  if (!startNode) throw new Error("Start node not found");
+
+  const nudge = startNode.nudge || "none";
+
+  return {
+    phone_number,
+    name,
+    level_id: level1,
+    node_id: startNode.id,
+    nudge_id: nudge,
+    session_expires_at: Date.now() + 1000 * 60 * 60 * 24,
+    campaign_id: campaign_Id,
+  };
 };

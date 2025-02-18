@@ -1,7 +1,6 @@
 import {
   any,
   Entity,
-  GetItemResponse,
   list,
   map,
   schema,
@@ -37,8 +36,8 @@ const flowEntitySchema = schema({
   name: string(),
   type: string().enum(...FlowType),
   data: map({
-    nodes: list(map(any())).default([]),
-    edges: list(map(any())).default([]),
+    nodes: list(any()).default([]),
+    edges: list(any()).default([]),
   }),
 });
 
@@ -47,10 +46,5 @@ const flowEntity = new Entity({
   name: TABLE_NAME,
   schema: flowEntitySchema,
 });
-
-export type Flow = Exclude<
-  GetItemResponse<typeof flowEntity>["Item"],
-  undefined
->;
 
 export default { table, entity: flowEntity };

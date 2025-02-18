@@ -1,10 +1,11 @@
 import { z } from "zod";
-import flowDb, { Flow, FlowType } from "../../db/flow.db";
+import flowDb, { FlowType } from "../../db/flow.db";
 import DbService from "./db.service";
-import { UpdateItemInput, QueryCommand } from "dynamodb-toolbox";
+import { QueryCommand } from "dynamodb-toolbox";
 import { generateDBId } from "../../utils";
 import { campaignService } from "./campaign.service";
 import { Campaign } from "../../db/campaign.db";
+import { Flow } from "../walkFlow/typings";
 
 type UE = typeof flowDb.entity;
 type UT = typeof flowDb.table;
@@ -14,20 +15,13 @@ class FlowService extends DbService<UE, UT> {
     super(flowDb.entity, flowDb.table);
   }
 
-  public async update(payload: {
-    [K in keyof UpdateItemInput<UE>]: Extract<
-      UpdateItemInput<UE>[K],
-      string | number | boolean
-    >;
-  }) {
-    const curr = await this.get({ id: payload.id });
+  public async updateAndValidate(id: string, payload: Omit<Flow, "id">) {
+    const curr = await this.get({ id });
     if (!curr) throw new Error("Flow not found");
 
-    const update: UpdateItemInput<UE> = { ...payload };
+    const updated = await super.update({ ...payload, id }, { id });
 
-    return await super.update(update, {
-      id: payload.id,
-    });
+    return updated!;
   }
 
   public async createAndValidate(
@@ -40,8 +34,8 @@ class FlowService extends DbService<UE, UT> {
       name: z.string(),
       type: z.enum(FlowType),
       data: z.object({
-        nodes: z.array(z.object(z.any())),
-        edges: z.array(z.object(z.any())),
+        nodes: z.array(z.any()),
+        edges: z.array(z.any()),
       }),
       campaign_id: z.string().optional(),
       order: z.number().positive().optional(),

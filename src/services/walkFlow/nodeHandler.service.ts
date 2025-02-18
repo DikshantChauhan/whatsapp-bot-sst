@@ -1,9 +1,9 @@
 import { User } from "../../db/user.db";
 import { userService } from "../db/user.service";
-import { GetNextNodeHandler } from "./flow.service";
+import { GetNextNodeHandler } from "./walkFlow";
 import { AppNode, AppNodeKey, DelayNode, Edge, Flow } from "./typings";
 
-class FlowHandlerService {
+class NodeHandlerService {
   private flow: Flow;
 
   constructor(flow: Flow) {
@@ -126,7 +126,9 @@ class FlowHandlerService {
         return node;
       }
 
-      const edge = sourceEdges[matchingIndex];
+      const edge = sourceEdges.find(
+        (edge) => edge.sourceHandle?.toString() === matchingIndex.toString()
+      );
 
       if (!edge)
         throw new Error(
@@ -171,11 +173,11 @@ class FlowHandlerService {
     sourceEdges,
     user,
   }) => {
-    const waitTill = user.currentNodeMeta?.delayWaitTill;
+    const waitTill = user.node_meta?.delayWaitTill;
 
     if (!waitTill) {
       throw new Error(
-        `No delayWaitTill found for delay node id: ${node.id} with user: ${user.phoneNumber}`
+        `No delayWaitTill found for delay node id: ${node.id} with user: ${user.phone_number}`
       );
     } else if (waitTill > Date.now()) {
       return node;
@@ -193,12 +195,12 @@ class FlowHandlerService {
   };
 
   public setDelayNodeMeta = async (user: User, node: DelayNode) => {
-    if (user.currentNodeMeta?.delayWaitTill) return;
+    if (user.node_meta?.delayWaitTill) return;
     const { delayInSecs } = node.data;
     await userService.update({
       ...user,
-      currentNodeMeta: {
-        ...(user.currentNodeMeta || {}),
+      node_meta: {
+        ...(user.node_meta || {}),
         delayWaitTill: Date.now() + delayInSecs * 1000,
       },
     });
@@ -208,4 +210,4 @@ class FlowHandlerService {
     this.whatsappButtonNodeHandler as any;
 }
 
-export default FlowHandlerService;
+export default NodeHandlerService;

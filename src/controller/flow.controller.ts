@@ -24,29 +24,14 @@ export default {
     }
   },
 
-  async updateFlow(_: Request, __: Response) {
-    // const { id } = request.params;
-    // const { type } = request.body as { type: FlowType };
-    // if (!id) {
-    //   response.status(400).json({ error: "Missing required fields" });
-    //   return;
-    // }
-    // if (type !== "level" && type !== "nudge") {
-    //   response.status(400).json({ error: "Missing required fields" });
-    //   return;
-    // }
-    // const flow = await flowService.update({
-    //   id,
-    //   type,
-    //   data: request.body.flow,
-    //   name: request.body.name,
-    // });
-    // if (!flow) {
-    //   response.status(400).json({ error: "flow not found" });
-    //   return;
-    // }
-    // response.send(flow);
-    // return;
+  async updateFlow(request: Request, response: Response) {
+    const { id } = request.params as { id: string };
+    try {
+      const flow = await flowService.updateAndValidate(id, request.body);
+      return successResponse(response, flow);
+    } catch (error) {
+      return errorResponse(response, error);
+    }
   },
 
   async getAllByType(request: Request, response: Response) {

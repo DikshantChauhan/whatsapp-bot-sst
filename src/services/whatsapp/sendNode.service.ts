@@ -1,6 +1,6 @@
 import WhatsappMessages from "./messages.service";
-import { SendNodeHandler } from "../flow/flow.service";
-import { AppNode, AppNodeKey } from "../flow/typings";
+import { SendNodeHandler } from "../walkFlow/walkFlow";
+import { AppNode, AppNodeKey } from "../walkFlow/typings";
 
 class SendNodesService extends WhatsappMessages {
   private toPhoneNumber: string;
@@ -39,7 +39,7 @@ class SendNodesService extends WhatsappMessages {
 
   public SendButtonNode: SendNodeHandler<AppNodeKey.WHATSAPP_BUTTON_NODE_KEY> =
     async (node) => {
-      const { text, buttons, footer, header } = node.data;
+      const { text, buttons, footer } = node.data;
       await this.sendButtonMessage(this.toPhoneNumber, text, buttons, footer);
     };
 
@@ -56,7 +56,6 @@ class SendNodesService extends WhatsappMessages {
 
   public SendVideoNode: SendNodeHandler<AppNodeKey.WHATSAPP_VIDEO_NODE_KEY> =
     async (node) => {
-      console.log("node : ", node);
       const { media, mediaType, caption } = node.data;
       await this.sendMediaMessage(
         this.toPhoneNumber,

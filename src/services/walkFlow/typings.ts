@@ -14,8 +14,8 @@ export interface Flow {
   name: string;
   type: "level" | "nudge";
   data: FlowData;
-  createdAt: string;
-  updatedAt: string;
+  created: string;
+  modified: string;
 }
 
 export interface Edge {
@@ -42,10 +42,9 @@ export type SubFlowValue = "inherit" | "none" | (string & {});
 export interface BaseNode<T extends AppNodeKey, D extends Record<string, any>> {
   id: string;
   type: T;
-  data: D & {
-    nudge?: SubFlowValue;
-    validator?: SubFlowValue;
-  };
+  data: D;
+  nudge?: SubFlowValue;
+  validator?: SubFlowValue;
 }
 
 export type IfElseNode = BaseNode<

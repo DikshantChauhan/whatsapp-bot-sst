@@ -22,7 +22,7 @@ export default {
   async get(request: Request, response: Response) {
     try {
       const { id } = request.params as { id: string };
-      const campaign = await campaignService.getFull({ id });
+      const campaign = await campaignService.get({ id });
 
       if (!campaign) return errorResponse(response, "Campaign not found");
       return successResponse(response, campaign);

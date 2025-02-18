@@ -37,6 +37,13 @@ export default $config({
       },
     });
 
+    const nudgeTable = new sst.aws.Dynamo("whatsapp-bot-dev-nudge", {
+      fields: {
+        id: "string",
+      },
+      primaryIndex: { hashKey: "id" },
+    });
+
     const api = new sst.aws.ApiGatewayV2("ApiGateway");
 
     const lambda = new sst.aws.Function("MainLambda", {
