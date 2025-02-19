@@ -6,27 +6,27 @@ import { FlowType } from "../db/flow.db";
 export default {
   async postFlow(request: Request, response: Response) {
     try {
-      const { campaign_id, level_number, flowData } = request.body as {
+      const { campaign_id, level_number, flow_data } = request.body as {
         campaign_id: string;
         level_number: number;
-        flowData: any;
+        flow_data: any;
       };
-
-      if (!campaign_id || !level_number || !flowData) {
-        return errorResponse(
-          response,
-          "Invalid payload, required fields are missing [campaign_id, level_number, flowData]"
-        );
-      }
 
       const payload = await flowService
         .createPayloadSchema()
-        .parseAsync({ campaign_id, level_number, flowData });
+        .parseAsync(flow_data);
+
+      if (payload.type === "level" && (!campaign_id || !level_number)) {
+        return errorResponse(
+          response,
+          "campaign_id and level_number are required for level flow"
+        );
+      }
 
       const result = await flowService.create(
+        payload,
         campaign_id,
-        level_number,
-        payload
+        level_number
       );
 
       return successResponse(response, result);

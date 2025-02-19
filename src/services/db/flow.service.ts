@@ -34,15 +34,20 @@ class FlowService {
   }
 
   public async create(
-    campaign_id: string,
-    level_number: number,
-    payload: Omit<Flow, "id">
+    payload: Omit<Flow, "id">,
+    campaign_id?: string,
+    level_number?: number
   ): Promise<{ flow: Flow; campaign?: Campaign }> {
     const type = payload.type;
     let campaign: Campaign | undefined;
 
     //validation for type level
     if (type === "level") {
+      if (!campaign_id || !level_number) {
+        throw new Error(
+          "Campaign ID and level number are required for level flow"
+        );
+      }
       campaign = await campaignService.getOrFail(campaign_id);
 
       if (level_number < 1 || level_number > campaign.levels.length + 1) {
@@ -61,7 +66,7 @@ class FlowService {
     //update campaign levels and if update fails, delete the flow
     if (type === "level") {
       const updatedLevels = [...campaign!.levels];
-      updatedLevels.splice(level_number - 1, 0, flow.id);
+      updatedLevels.splice(level_number! - 1, 0, flow.id);
       try {
         campaign = await campaignService.update(campaign!.id, {
           levels: updatedLevels,

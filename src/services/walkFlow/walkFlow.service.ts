@@ -66,7 +66,7 @@ class WalkFlowService {
       [AppNodeKey.END_NODE_KEY]: {
         getNextNode: this.nodeHandlerService.endNodeHandler,
         sendNode: this.sendNodesService.SendEndNode,
-        pauseAfterExecution: true,
+        pauseAfterExecution: false,
       },
       [AppNodeKey.WHATSAPP_VIDEO_NODE_KEY]: {
         getNextNode: this.nodeHandlerService.whatsappVideoNodeHandler,
@@ -91,7 +91,6 @@ class WalkFlowService {
 
   walk = async (userInput?: string) => {
     const currentNode = this.nodeHandlerService.getNodeById(this.user.node_id);
-    console.log("currentNode", currentNode);
 
     if (!currentNode)
       throw new Error(
@@ -129,9 +128,19 @@ class WalkFlowService {
           : nextNode.nudge === "none"
           ? undefined
           : nextNode.nudge,
+      ...(currentNode.type === AppNodeKey.END_NODE_KEY
+        ? {
+            level_id: this.nodeHandlerService.flow.id,
+          }
+        : {}),
     });
 
-    if (!pauseAfterExecution) {
+    //also prevent infinite loops for last end node in last level
+    if (
+      !pauseAfterExecution &&
+      nextNode.type !== AppNodeKey.END_NODE_KEY &&
+      currentNode.id === nextNode.id
+    ) {
       this.walk(userInput);
     }
   };

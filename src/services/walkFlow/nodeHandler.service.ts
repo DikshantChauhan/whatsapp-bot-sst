@@ -3,9 +3,10 @@ import { userService } from "../db/user.service";
 import { GetNextNodeHandler } from "./walkFlow.service";
 import { AppNode, AppNodeKey, DelayNode, Edge, Flow } from "./typings";
 import { campaignService } from "../db/campaign.service";
+import { flowService } from "../db/flow.service";
 
 class NodeHandlerService {
-  private flow: Flow;
+  flow: Flow;
 
   constructor(flow: Flow) {
     this.flow = flow;
@@ -151,7 +152,25 @@ class NodeHandlerService {
     user,
   }) => {
     const campaign = await campaignService.getOrFail(user.campaign_id);
-    return node;
+
+    const currentLevelIndex = campaign.levels.findIndex(
+      (level) => level === user.level_id
+    );
+    const nextLevelId = campaign.levels[currentLevelIndex + 1];
+
+    if (!nextLevelId) {
+      return node;
+    }
+
+    this.flow = await flowService.getOrFail(nextLevelId);
+    const nextNode = this.getStartNode();
+
+    if (!nextNode)
+      throw new Error(
+        `No next node found after end node id: ${node.id} with new flow-id: ${nextLevelId}`
+      );
+
+    return nextNode;
   };
 
   public whatsappVideoNodeHandler: GetNextNodeHandler<AppNodeKey.WHATSAPP_VIDEO_NODE_KEY> =
