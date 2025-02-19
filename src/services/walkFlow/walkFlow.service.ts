@@ -13,7 +13,7 @@ export type GetNextNodeHandler<P extends AppNodeKey> = (data: {
   input?: string;
   sourceEdges: Edge[];
   user: User;
-}) => AppNode;
+}) => Promise<AppNode> | AppNode;
 
 type NodeHandlerMap = {
   [K in AppNodeKey]: {
@@ -89,7 +89,7 @@ class WalkFlowService {
     };
   }
 
-  walkFlow = async (userInput?: string) => {
+  walk = async (userInput?: string) => {
     const currentNode = this.nodeHandlerService.getNodeById(this.user.node_id);
     console.log("currentNode", currentNode);
 
@@ -102,7 +102,7 @@ class WalkFlowService {
       getNextNode: GetNextNodeHandler<AppNodeKey>;
     };
 
-    const nextNode = getNextNode({
+    const nextNode = await getNextNode({
       node: currentNode,
       input: userInput,
       sourceEdges: this.nodeHandlerService.getNodeSourceEdges(currentNode.id),
@@ -119,7 +119,7 @@ class WalkFlowService {
     //run next node validator
     await sendNode(nextNode);
 
-    this.user = await userService.update({
+    this.user = await userService.update(this.user.phone_number, {
       ...this.user,
       node_id: nextNode.id,
       node_meta: {},
@@ -132,7 +132,7 @@ class WalkFlowService {
     });
 
     if (!pauseAfterExecution) {
-      this.walkFlow(userInput);
+      this.walk(userInput);
     }
   };
 }

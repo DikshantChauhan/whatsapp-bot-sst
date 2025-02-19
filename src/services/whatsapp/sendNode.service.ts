@@ -1,5 +1,5 @@
 import WhatsappMessages from "./messages.service";
-import { SendNodeHandler } from "../walkFlow/walkFlow";
+import { SendNodeHandler } from "../walkFlow/walkFlow.service";
 import { AppNode, AppNodeKey } from "../walkFlow/typings";
 
 class SendNodesService extends WhatsappMessages {

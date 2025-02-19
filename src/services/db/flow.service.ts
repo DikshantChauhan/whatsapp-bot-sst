@@ -7,77 +7,67 @@ import { campaignService } from "./campaign.service";
 import { Campaign } from "../../db/campaign.db";
 import { Flow } from "../walkFlow/typings";
 
-type UE = typeof flowDb.entity;
-type UT = typeof flowDb.table;
+class FlowService {
+  db = new DbService(flowDb.entity, flowDb.table);
 
-class FlowService extends DbService<UE, UT> {
-  constructor() {
-    super(flowDb.entity, flowDb.table);
+  async update(id: string, payload: Partial<Omit<Flow, "id">>): Promise<Flow> {
+    return (await this.db.updateAndGet({ id }, { ...payload, id })) as Flow;
   }
 
-  public async updateAndValidate(id: string, payload: Omit<Flow, "id">) {
-    const curr = await this.get({ id });
-    if (!curr) throw new Error("Flow not found");
-
-    const updated = await super.update({ ...payload, id }, { id });
-
-    return updated!;
+  async delete(id: string) {
+    await this.db.delete({ id });
   }
 
-  public async createAndValidate(
-    payload: Omit<Flow, "id"> & {
-      campaign_id?: string;
-      order?: number;
-    }
-  ) {
-    const schema = z.object({
+  createPayloadSchema() {
+    return z.object({
       name: z.string(),
       type: z.enum(FlowType),
       data: z.object({
         nodes: z.array(z.any()),
         edges: z.array(z.any()),
       }),
-      campaign_id: z.string().optional(),
-      order: z.number().positive().optional(),
     });
+  }
 
-    const { campaign_id, order, ...flowPayload } = await schema.parseAsync(
-      payload
-    );
+  updatePayloadSchema() {
+    return this.createPayloadSchema().partial();
+  }
 
+  public async create(
+    campaign_id: string,
+    level_number: number,
+    payload: Omit<Flow, "id">
+  ): Promise<{ flow: Flow; campaign?: Campaign }> {
+    const type = payload.type;
     let campaign: Campaign | undefined;
 
-    // If the flow is a level, we need to get the campaign and validate it
-    if (flowPayload.type === "level") {
-      if (!campaign_id) {
-        throw new Error("Campaign ID is required for level flows");
-      }
-      campaign = await campaignService.get({ id: campaign_id });
-      if (!campaign) {
-        throw new Error("Campaign not found");
+    //validation for type level
+    if (type === "level") {
+      campaign = await campaignService.getOrFail(campaign_id);
+
+      if (level_number < 1 || level_number > campaign.levels.length + 1) {
+        throw new Error(
+          "Level number must be between 1 and " + (campaign.levels.length + 1)
+        );
       }
     }
 
-    const flow = await this.insert({ ...flowPayload, id: generateDBId() });
+    //create flow
+    const flow = (await this.db.insert({
+      ...payload,
+      id: generateDBId(),
+    })) as Flow;
 
-    // If the flow is a level, we need to update the campaign levels, if error in updating, delete the flow
-    if (campaign) {
+    //update campaign levels and if update fails, delete the flow
+    if (type === "level") {
+      const updatedLevels = [...campaign!.levels];
+      updatedLevels.splice(level_number - 1, 0, flow.id);
       try {
-        const updatedLevels = [...campaign.levels];
-        updatedLevels.splice(
-          order ? order + 1 : updatedLevels.length,
-          0,
-          flow.id
-        );
-        const updatedCampaign = await campaignService.updateAndValidate(
-          campaign.id,
-          {
-            levels: updatedLevels,
-          }
-        );
-        return { flow, campaign: updatedCampaign };
+        campaign = await campaignService.update(campaign!.id, {
+          levels: updatedLevels,
+        });
       } catch (error) {
-        this.delete({ id: flow.id });
+        await this.delete(flow.id);
         throw error;
       }
     }
@@ -85,22 +75,27 @@ class FlowService extends DbService<UE, UT> {
     return { flow, campaign };
   }
 
-  public async listByType(type: string) {
-    const result = await this.table
+  public async listByType(type: (typeof FlowType)[number]): Promise<Flow[]> {
+    const result = await this.db.table
       .build(QueryCommand)
       .query({
         index: "byType",
         partition: type,
       })
-      .entities(this.entity)
+      .entities(this.db.entity)
       .send();
 
-    return result.Items;
+    return (result.Items || []) as Flow[];
   }
 
-  public async all() {
-    const result = await super.scanAll();
-    return result;
+  public async scanAll(): Promise<Flow[]> {
+    const result = await this.db.scanAll();
+    return result as Flow[];
+  }
+
+  public async getOrFail(id: string): Promise<Flow> {
+    const flow = await this.db.getOrFail({ id });
+    return flow as Flow;
   }
 }
 

@@ -14,8 +14,6 @@ export interface Flow {
   name: string;
   type: "level" | "nudge";
   data: FlowData;
-  created: string;
-  modified: string;
 }
 
 export interface Edge {

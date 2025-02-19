@@ -5,7 +5,11 @@ import { errorResponse, successResponse } from "../utils";
 export default {
   async create(request: Request, response: Response) {
     try {
-      const campaign = await campaignService.createAndValidate(request.body);
+      const payload = await campaignService
+        .createPayloadSchema()
+        .parseAsync(request.body);
+
+      const campaign = await campaignService.create(payload);
 
       return successResponse(response, campaign);
     } catch (error) {
@@ -22,9 +26,8 @@ export default {
   async get(request: Request, response: Response) {
     try {
       const { id } = request.params as { id: string };
-      const campaign = await campaignService.get({ id });
+      const campaign = await campaignService.getOrFail(id);
 
-      if (!campaign) return errorResponse(response, "Campaign not found");
       return successResponse(response, campaign);
     } catch (error) {
       return errorResponse(response, error);
@@ -33,31 +36,16 @@ export default {
 
   async update(request: Request, response: Response) {
     try {
-      const campaign = await campaignService.updateAndValidate(
-        request.body.id,
-        request.body
-      );
+      const { id } = request.params as { id: string };
+      const payload = await campaignService
+        .updatePayloadSchema()
+        .parseAsync(request.body);
+
+      const campaign = await campaignService.update(id, payload);
+
       return successResponse(response, campaign);
     } catch (error) {
       return errorResponse(response, error);
     }
-  },
-
-  async delete(request: Request, response: Response) {
-    const { id } = request.params;
-
-    if (!id) {
-      response.status(400).json({ error: "Missing required fields" });
-      return;
-    }
-
-    const success = await campaignService.delete({ id });
-
-    if (!success) {
-      response.status(404).json({ error: "Campaign not found" });
-      return;
-    }
-
-    response.status(200).json({ message: "Campaign deleted" });
   },
 };

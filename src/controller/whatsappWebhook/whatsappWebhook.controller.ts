@@ -1,29 +1,29 @@
 import { Request, Response } from "express";
 import { Message, WhatsAppWebhookPayload } from "./webhook.typings";
 import { userService } from "../../services/db/user.service";
-import WalkFlowService from "../../services/walkFlow/walkFlow";
+import WalkFlowService from "../../services/walkFlow/walkFlow.service";
 import { whatsappMessagesService } from "../../services/whatsapp/messages.service";
 import { User } from "../../db/user.db";
 import { getDefaultUser } from "../../utils";
 import { flowService } from "../../services/db/flow.service";
 
 const getOrCreateUser = async (phone_number: string, name: string) => {
-  let user = await userService.get({ phone_number });
+  let user = await userService.get(phone_number);
 
   if (!user) {
     const payload = await getDefaultUser(phone_number, name);
-    user = await userService.createAndValidate(payload);
+    user = await userService.create(payload);
   }
   return user;
 };
 
 const handleMessageReply = async (user: User, message: Message) => {
-  const flow = await flowService.getOrFail({ id: user.level_id });
+  const flow = await flowService.getOrFail(user.level_id);
   const walkFlowService = new WalkFlowService(flow, user);
 
   switch (message.type) {
     case "text":
-      await walkFlowService.walkFlow(message.text?.body);
+      await walkFlowService.walk(message.text?.body);
       break;
 
     case "audio":
@@ -86,10 +86,10 @@ const handleMessageReply = async (user: User, message: Message) => {
       }
       switch (interactive.type) {
         case "button_reply":
-          await walkFlowService.walkFlow(interactive.button_reply?.title);
+          await walkFlowService.walk(interactive.button_reply?.title);
           break;
         case "list_reply":
-          await walkFlowService.walkFlow(interactive.list_reply?.title);
+          await walkFlowService.walk(interactive.list_reply?.title);
           break;
       }
       break;

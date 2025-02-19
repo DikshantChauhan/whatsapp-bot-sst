@@ -1,37 +1,24 @@
 import userDb, { User } from "../../db/user.db";
 import DbService from "./db.service";
-import { PutItemInput, UpdateItemInput } from "dynamodb-toolbox";
 import { z } from "zod";
 
-type UE = typeof userDb.entity;
-type UT = typeof userDb.table;
+class UserService {
+  db = new DbService(userDb.entity, userDb.table);
 
-class UserService extends DbService<UE, UT> {
-  constructor() {
-    super(userDb.entity, userDb.table);
-  }
-
-  public async update(
-    payload: Partial<User> & { phone_number: string }
+  async update(
+    phone_number: string,
+    payload: Partial<Omit<User, "phone_number">>
   ): Promise<User> {
-    const curr = await this.get({ phone_number: payload.phone_number });
-    if (!curr) throw new Error("User not found");
-
-    const update: UpdateItemInput<UE> = { ...payload };
-
-    return (await super.update(update, {
-      phone_number: payload.phone_number,
-    }))!;
+    return this.db.updateAndGet({ phone_number }, { ...payload, phone_number });
   }
 
-  public async scanAll() {
-    const users = await super.scanAll();
-
-    return users;
+  async scanAll(): Promise<User[]> {
+    const users = await this.db.scanAll();
+    return users ?? [];
   }
 
-  private async putItemValidator(payload: PutItemInput<UE>) {
-    const schema = z.object({
+  async createPayloadSchema() {
+    return z.object({
       phone_number: z.string(),
       name: z.string(),
       level_id: z.string(),
@@ -45,16 +32,14 @@ class UserService extends DbService<UE, UT> {
         })
         .optional(),
     });
-
-    const result = await schema.parseAsync(payload);
-    return result;
   }
 
-  public async createAndValidate(payload: User) {
-    const input = await this.putItemValidator(payload);
-    const user = await this.insert(input);
+  async create(payload: User): Promise<User> {
+    return await this.db.insert(payload);
+  }
 
-    return user;
+  async get(phone_number: string): Promise<User | undefined> {
+    return await this.db.get({ phone_number });
   }
 }
 

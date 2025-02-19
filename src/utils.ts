@@ -48,12 +48,12 @@ export const getDefaultUser = async (
   name: string
 ): Promise<User> => {
   const campaign_Id = "e1ea23a0-7fee-474f-8542-312b9d94b92a";
-  const campaign = await campaignService.getOrFail({ id: campaign_Id });
-  const level1 = campaign.levels[0];
+  const campaign = await campaignService.getOrFail(campaign_Id);
+  const startLevelId = campaign.levels[0];
 
-  if (!level1) throw new Error("Level 1 not found");
+  if (!startLevelId) throw new Error("Start level not found");
 
-  const flow = await flowService.getOrFail({ id: level1 });
+  const flow = await flowService.getOrFail(startLevelId);
 
   const startNode = new NodeHandlerService(flow as Flow).getStartNode();
 
@@ -64,7 +64,7 @@ export const getDefaultUser = async (
   return {
     phone_number,
     name,
-    level_id: level1,
+    level_id: startLevelId,
     node_id: startNode.id,
     nudge_id: nudge,
     session_expires_at: Date.now() + 1000 * 60 * 60 * 24,

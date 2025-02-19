@@ -38,7 +38,7 @@ const testHandler = async (request: Request, response: Response) => {
   try {
     const { phoneNumber, name } = request.body;
     const payload = await getDefaultUser(phoneNumber, name);
-    const user = await userService.update(payload);
+    const user = await userService.update(phoneNumber, payload);
     return successResponse(response, user);
   } catch (error) {
     return errorResponse(response, error);

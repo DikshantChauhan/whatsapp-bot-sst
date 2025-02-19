@@ -1,7 +1,8 @@
 import { User } from "../../db/user.db";
 import { userService } from "../db/user.service";
-import { GetNextNodeHandler } from "./walkFlow";
+import { GetNextNodeHandler } from "./walkFlow.service";
 import { AppNode, AppNodeKey, DelayNode, Edge, Flow } from "./typings";
+import { campaignService } from "../db/campaign.service";
 
 class NodeHandlerService {
   private flow: Flow;
@@ -145,9 +146,11 @@ class NodeHandlerService {
       return nextNode;
     };
 
-  public endNodeHandler: GetNextNodeHandler<AppNodeKey.END_NODE_KEY> = ({
+  public endNodeHandler: GetNextNodeHandler<AppNodeKey.END_NODE_KEY> = async ({
     node,
+    user,
   }) => {
+    const campaign = await campaignService.getOrFail(user.campaign_id);
     return node;
   };
 
@@ -197,7 +200,7 @@ class NodeHandlerService {
   public setDelayNodeMeta = async (user: User, node: DelayNode) => {
     if (user.node_meta?.delayWaitTill) return;
     const { delayInSecs } = node.data;
-    await userService.update({
+    await userService.update(user.phone_number, {
       ...user,
       node_meta: {
         ...(user.node_meta || {}),

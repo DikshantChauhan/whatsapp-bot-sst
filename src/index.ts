@@ -27,16 +27,12 @@ app.delete("/flow/:id", flowController.delete);
 // User
 app.get("/users", userController.all);
 app.get("/user/:phone_number", userController.get);
-// app.post("/user", userController.create);
-// app.put("/user/:phone_number", userController.update);
-// app.delete("/user/:phone_number", userController.delete);
 
 //campaign
 app.get("/campaigns", campaignController.getAll);
 app.get("/campaign/:id", campaignController.get);
 app.post("/campaign", campaignController.create);
-app.put("/campaign", campaignController.update);
-// app.delete("/campaign/:id", campaignController.delete);
+app.put("/campaign/:id", campaignController.update);
 
 //misc
 app.post("/test", miscController.testHandler);

@@ -11,18 +11,17 @@ import {
   UpdateItemCommand,
   UpdateItemInput,
 } from "dynamodb-toolbox";
-import { Flow } from "../walkFlow/typings";
 
 export default class DbService<E extends Entity, T extends Table> {
-  protected entity: E;
-  protected table: T;
+  entity: E;
+  table: T;
 
   constructor(entity: E, table: T) {
     this.entity = entity;
     this.table = table;
   }
 
-  public async insert(item: PutItemInput<E>) {
+  async insert(item: PutItemInput<E>) {
     const { ToolboxItem } = await this.entity
       .build(PutItemCommand)
       .item(item)
@@ -31,13 +30,13 @@ export default class DbService<E extends Entity, T extends Table> {
     return ToolboxItem;
   }
 
-  public async get(key: KeyInputItem<E>) {
+  async get(key: KeyInputItem<E>) {
     const { Item } = await this.entity.build(GetItemCommand).key(key).send();
 
     return Item;
   }
 
-  protected async update(item: UpdateItemInput<E>, key: KeyInputItem<E>) {
+  async update(item: UpdateItemInput<E>) {
     const transormedItems =
       typeof item === "object"
         ? Object.entries(item).reduce((acc, [key, value]) => {
@@ -49,14 +48,13 @@ export default class DbService<E extends Entity, T extends Table> {
           }, {} as UpdateItemInput<E>)
         : item;
 
-    await this.entity.build(UpdateItemCommand).item(transormedItems).send();
-
-    const updatedItem = await this.get(key);
-
-    return updatedItem;
+    return await this.entity
+      .build(UpdateItemCommand)
+      .item(transormedItems)
+      .send();
   }
 
-  protected async scanAll() {
+  async scanAll() {
     const { Items } = await this.table
       .build(ScanCommand)
       .entities(this.entity)
@@ -65,7 +63,7 @@ export default class DbService<E extends Entity, T extends Table> {
     return Items;
   }
 
-  public async delete(key: KeyInputItem<E>) {
+  async delete(key: KeyInputItem<E>) {
     const { $metadata } = await this.entity
       .build(DeleteItemCommand)
       .key(key)
@@ -74,9 +72,17 @@ export default class DbService<E extends Entity, T extends Table> {
     return $metadata.httpStatusCode === 200;
   }
 
-  public async getOrFail(key: KeyInputItem<E>) {
+  async getOrFail(key: KeyInputItem<E>) {
     const item = await this.get(key);
     if (!item) throw new Error("Item not found");
-    return item as Flow;
+    return item;
+  }
+
+  async updateAndGet(
+    key: KeyInputItem<E>,
+    items: Parameters<typeof this.update>[0]
+  ) {
+    await this.update(items);
+    return this.getOrFail(key);
   }
 }

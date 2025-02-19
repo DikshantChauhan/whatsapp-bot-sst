@@ -1,11 +1,34 @@
 import { Request, Response } from "express";
 import { flowService } from "../services/db/flow.service";
 import { errorResponse, successResponse } from "../utils";
+import { FlowType } from "../db/flow.db";
 
 export default {
   async postFlow(request: Request, response: Response) {
     try {
-      const result = await flowService.createAndValidate(request.body);
+      const { campaign_id, level_number, flowData } = request.body as {
+        campaign_id: string;
+        level_number: number;
+        flowData: any;
+      };
+
+      if (!campaign_id || !level_number || !flowData) {
+        return errorResponse(
+          response,
+          "Invalid payload, required fields are missing [campaign_id, level_number, flowData]"
+        );
+      }
+
+      const payload = await flowService
+        .createPayloadSchema()
+        .parseAsync({ campaign_id, level_number, flowData });
+
+      const result = await flowService.create(
+        campaign_id,
+        level_number,
+        payload
+      );
+
       return successResponse(response, result);
     } catch (error) {
       return errorResponse(response, error);
@@ -17,7 +40,7 @@ export default {
       const { id } = request.params as {
         id: string;
       };
-      const flow = await flowService.get({ id });
+      const flow = await flowService.getOrFail(id);
       return successResponse(response, flow);
     } catch (error) {
       return errorResponse(response, error);
@@ -27,7 +50,10 @@ export default {
   async updateFlow(request: Request, response: Response) {
     const { id } = request.params as { id: string };
     try {
-      const flow = await flowService.updateAndValidate(id, request.body);
+      const payload = await flowService
+        .updatePayloadSchema()
+        .parseAsync(request.body);
+      const flow = await flowService.update(id, payload);
       return successResponse(response, flow);
     } catch (error) {
       return errorResponse(response, error);
@@ -37,8 +63,17 @@ export default {
   async getAllByType(request: Request, response: Response) {
     try {
       const { type } = request.params as {
-        type: string;
+        type: (typeof FlowType)[number];
       };
+
+      //validate type for flow type
+      if (!FlowType.includes(type)) {
+        return errorResponse(
+          response,
+          "Invalid type, valid types are: " + FlowType.join(", ")
+        );
+      }
+
       const result = await flowService.listByType(type);
       return successResponse(response, result);
     } catch (error) {
@@ -52,8 +87,8 @@ export default {
         id: string;
       };
 
-      const flow = await flowService.delete({ id });
-      return successResponse(response, flow);
+      await flowService.delete(id);
+      return successResponse(response, { message: "Flow deleted" });
     } catch (error) {
       return errorResponse(response, error);
     }

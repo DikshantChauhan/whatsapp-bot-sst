@@ -1,79 +1,43 @@
 import { z } from "zod";
 import campaignDb, { Campaign } from "../../db/campaign.db";
 import DbService from "./db.service";
-import { PutItemInput, KeyInputItem } from "dynamodb-toolbox";
 import { generateDBId } from "../../utils";
-import { flowService } from "./flow.service";
 
-type E = typeof campaignDb.entity;
-type T = typeof campaignDb.table;
+class CampaignService {
+  db = new DbService(campaignDb.entity, campaignDb.table);
 
-class CampaignService extends DbService<E, T> {
-  constructor() {
-    super(campaignDb.entity, campaignDb.table);
-  }
-
-  public async updateAndValidate(
-    id: string,
-    payload: Partial<Omit<Campaign, "id">>
-  ) {
-    const result = await this.updateSchema().parseAsync(payload);
-
-    if (!(await this.get({ id }))) {
-      throw new Error("Campaign not found");
-    }
-
-    return await super.update(
-      {
-        ...result,
-        id,
-      },
-      { id }
-    );
-  }
-
-  public async scanAll() {
-    return await super.scanAll();
-  }
-
-  private createSchema() {
+  createPayloadSchema() {
     return z.object({
       name: z.string(),
-      allowed_nodes: z.array(z.string()).optional(),
-      levels: z.array(z.string()).optional(),
+      allowed_nodes: z.array(z.string()),
+      levels: z.array(z.string()),
     });
   }
 
-  private updateSchema() {
-    return this.createSchema().partial();
+  updatePayloadSchema() {
+    return this.createPayloadSchema().partial();
   }
 
-  public async createAndValidate(payload: Omit<PutItemInput<E>, "id">) {
-    const result = await this.createSchema().parseAsync(payload);
+  async update(
+    id: string,
+    payload: Partial<Omit<Campaign, "id">>
+  ): Promise<Campaign> {
+    return await this.db.updateAndGet({ id }, { ...payload, id });
+  }
 
-    const campaign = await this.insert({
-      ...result,
+  async scanAll(): Promise<Campaign[]> {
+    return (await this.db.scanAll()) ?? [];
+  }
+
+  async create(payload: Omit<Campaign, "id">): Promise<Campaign> {
+    return await this.db.insert({
+      ...payload,
       id: generateDBId(),
     });
-
-    return campaign;
   }
 
-  public async getFull(key: KeyInputItem<E>) {
-    const campaign = await this.get(key);
-    if (!campaign) return undefined;
-
-    const levels = await Promise.all(
-      campaign.levels.map(async (id) => {
-        const level = await flowService.get({ id });
-        if (!level)
-          throw new Error(`Level of id ${id} not found for campaign ${key.id}`);
-
-        return level;
-      })
-    );
-
-    return { ...campaign, levels };
+  async getOrFail(id: string): Promise<Campaign> {
+    return await this.db.getOrFail({ id });
   }
 }
 
