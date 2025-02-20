@@ -36,5 +36,9 @@ app.put("/campaign/:id", campaignController.update);
 
 //misc
 app.post("/test", miscController.testHandler);
+app.post("/create-nudge-seed", miscController.createNudgeSeedHandler);
+app.get("/scan-all-nudges", miscController.scanAllNudgesHandler);
+app.post("/get-past-nudges", miscController.getPastNudgesHandler);
+app.delete("/delete-all-nudges", miscController.deleteAllNudgesHandler);
 
 export const handler = serverless(app);

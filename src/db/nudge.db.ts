@@ -1,9 +1,7 @@
 import {
-  any,
   Entity,
   GetItemResponse,
-  list,
-  map,
+  number,
   schema,
   string,
   Table,
@@ -16,29 +14,70 @@ const TABLE_NAME = Resource["whatsapp-bot-dev-nudge"].name;
 const table = new Table({
   name: TABLE_NAME,
   partitionKey: {
-    name: "yyyymmdd",
+    name: "pk",
     type: "string",
   },
   sortKey: {
-    name: "mins",
+    name: "sk",
     type: "string",
+  },
+  indexes: {
+    byUserId: {
+      partitionKey: {
+        name: "user_id",
+        type: "string",
+      },
+      type: "global",
+    },
+    byReminderTimeUnix: {
+      type: "local",
+      sortKey: {
+        name: "reminder_time_unix",
+        type: "number",
+      },
+    },
   },
   documentClient,
 });
 
 const nudgeEntitySchema = schema({
-  yyyymmdd: string().key(),
-  mins: string().key(),
-  data: map({
-    nodes: list(any()).default([]),
-    edges: list(any()).default([]),
-  }),
+  user_id: string().key(),
+  reminder_time_unix: number().key(),
+  message: string(),
 });
+
+export const nudgeTableKeyHelper = (reminder_time_unix: number) => {
+  const date = new Date(reminder_time_unix);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const minutes = Math.floor(reminder_time_unix / 1000 / 60);
+
+  const data = {
+    pk: `${year}/${month}/${day}`,
+    sk: {
+      minutes,
+      getSk: (minutes: number, user_id: string) => `${minutes}#${user_id}`,
+    },
+  };
+
+  console.log(data);
+
+  return data;
+};
 
 const nudgeEntity = new Entity({
   table,
   name: TABLE_NAME,
   schema: nudgeEntitySchema,
+  computeKey: ({ reminder_time_unix, user_id }) => {
+    const { pk, sk } = nudgeTableKeyHelper(reminder_time_unix);
+
+    return {
+      pk,
+      sk: sk.getSk(sk.minutes, user_id),
+    };
+  },
 });
 
 export type Nudge = Exclude<

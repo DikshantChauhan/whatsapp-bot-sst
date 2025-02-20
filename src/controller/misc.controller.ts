@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { errorResponse, getDefaultUser, successResponse } from "../utils";
 import { userService } from "../services/db/user.service";
+import { nudgeService } from "../services/db/nudge.service";
 
 const nudgeHandler = async (_: Request, __: Response) => {
   // const { phoneNumber } = request.body;
@@ -45,7 +46,59 @@ const testHandler = async (request: Request, response: Response) => {
   }
 };
 
+const createNudgeSeedHandler = async (_: Request, response: Response) => {
+  try {
+    const nudges = await nudgeService.create({
+      message: "Hello, how are you?",
+      user_id: "1",
+      reminder_time_unix: 1739988281582,
+    });
+
+    return successResponse(response, nudges);
+  } catch (error) {
+    return errorResponse(response, error);
+  }
+};
+
+const scanAllNudgesHandler = async (_: Request, response: Response) => {
+  try {
+    const nudges = await nudgeService.scanAll();
+    return successResponse(response, nudges);
+  } catch (error) {
+    return errorResponse(response, error);
+  }
+};
+
+const deleteAllNudgesHandler = async (_: Request, response: Response) => {
+  try {
+    const nudges = await nudgeService.scanAll();
+    await Promise.all(
+      nudges.map((nudge) => nudgeService.deleteByUserId(nudge.user_id))
+    );
+    return successResponse(response, "All nudges deleted");
+  } catch (error) {
+    return errorResponse(response, error);
+  }
+};
+const getPastNudgesHandler = async (request: Request, response: Response) => {
+  try {
+    const { greaterThanUnix } = request.body;
+    if (!greaterThanUnix || typeof greaterThanUnix !== "number") {
+      return errorResponse(response, "greaterThanUnix is required");
+    }
+
+    const nudges = await nudgeService.getPastNudges(greaterThanUnix);
+    return successResponse(response, nudges);
+  } catch (error) {
+    return errorResponse(response, error);
+  }
+};
+
 export default {
   nudgeHandler,
   testHandler,
+  createNudgeSeedHandler,
+  scanAllNudgesHandler,
+  getPastNudgesHandler,
+  deleteAllNudgesHandler,
 };

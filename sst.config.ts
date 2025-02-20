@@ -39,9 +39,22 @@ export default $config({
 
     const nudgeTable = new sst.aws.Dynamo("whatsapp-bot-dev-nudge", {
       fields: {
-        id: "string",
+        pk: "string",
+        sk: "string",
+        user_id: "string",
+        reminder_time_unix: "number",
       },
-      primaryIndex: { hashKey: "id" },
+      primaryIndex: { hashKey: "pk", rangeKey: "sk" },
+      globalIndexes: {
+        byUserId: {
+          hashKey: "user_id",
+        },
+      },
+      localIndexes: {
+        byReminderTimeUnix: {
+          rangeKey: "reminder_time_unix",
+        },
+      },
     });
 
     const api = new sst.aws.ApiGatewayV2("ApiGateway");
@@ -49,7 +62,7 @@ export default $config({
     const lambda = new sst.aws.Function("MainLambda", {
       handler: "src/index.handler",
       timeout: "30 seconds",
-      link: [userTable, campaignTable, flowTable],
+      link: [userTable, campaignTable, flowTable, nudgeTable],
     });
 
     api.route("ANY /{proxy+}", lambda.arn);
