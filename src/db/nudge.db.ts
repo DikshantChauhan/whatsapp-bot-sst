@@ -43,7 +43,8 @@ const table = new Table({
 const nudgeEntitySchema = schema({
   user_id: string().key(),
   reminder_time_unix: number().key(),
-  message: string(),
+  nudge_id: string(),
+  node_id: string(),
 });
 
 export const nudgeTableKeyHelper = (reminder_time_unix: number) => {

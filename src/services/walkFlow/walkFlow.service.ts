@@ -1,8 +1,6 @@
 import { AppNodeKey, AppNode, Edge, Flow } from "./typings";
 import SendNodeService from "../whatsapp/sendNode.service";
 import NodeHandlerService from "./nodeHandler.service";
-import { User } from "../../db/user.db";
-import { userService } from "../db/user.service";
 
 export type SendNodeHandler<P extends AppNodeKey> = (
   node: Extract<AppNode, { type: P }>
@@ -12,8 +10,7 @@ export type GetNextNodeHandler<P extends AppNodeKey> = (data: {
   node: Extract<AppNode, { type: P }>;
   input?: string;
   sourceEdges: Edge[];
-  user: User;
-}) => Promise<AppNode> | AppNode;
+}) => AppNode;
 
 type NodeHandlerMap = {
   [K in AppNodeKey]: {
@@ -24,15 +21,13 @@ type NodeHandlerMap = {
 };
 
 class WalkFlowService {
-  private nodeHandlerService: NodeHandlerService;
-  private sendNodesService: SendNodeService;
-  private nodeHandlerMap: NodeHandlerMap;
-  private user: User;
+  nodeHandlerService: NodeHandlerService;
+  sendNodesService: SendNodeService;
+  nodeHandlerMap: NodeHandlerMap;
 
-  constructor(flow: Flow, user: User) {
+  constructor(flow: Flow, user_phone_number: string) {
     this.nodeHandlerService = new NodeHandlerService(flow);
-    this.sendNodesService = new SendNodeService(user.phone_number);
-    this.user = user;
+    this.sendNodesService = new SendNodeService(user_phone_number);
     this.nodeHandlerMap = this.createNodeHandlerMap();
   }
 
@@ -77,7 +72,7 @@ class WalkFlowService {
         getNextNode: this.nodeHandlerService.delayNodeHandler,
         sendNode: async (node) => {
           await this.sendNodesService.SendDelayNode(node);
-          await this.nodeHandlerService.setDelayNodeMeta(this.user, node);
+          // await this.nodeHandlerService.setDelayNodeMeta(this.user, node);
         },
         pauseAfterExecution: true,
       },
@@ -89,23 +84,22 @@ class WalkFlowService {
     };
   }
 
-  walk = async (userInput?: string) => {
-    const currentNode = this.nodeHandlerService.getNodeById(this.user.node_id);
+  walk = async (currentNodeId: string, userInput?: string) => {
+    const currentNode = this.nodeHandlerService.getNodeById(currentNodeId);
 
     if (!currentNode)
       throw new Error(
-        `Walk started, no current node found! currentNodeId: ${this.user.node_id}`
+        `Walk started, no current node found! currentNodeId: ${currentNodeId}`
       );
 
     const { getNextNode } = this.nodeHandlerMap[currentNode.type] as {
       getNextNode: GetNextNodeHandler<AppNodeKey>;
     };
 
-    const nextNode = await getNextNode({
+    const nextNode = getNextNode({
       node: currentNode,
       input: userInput,
       sourceEdges: this.nodeHandlerService.getNodeSourceEdges(currentNode.id),
-      user: this.user,
     });
 
     const { sendNode, pauseAfterExecution } = this.nodeHandlerMap[
@@ -115,34 +109,12 @@ class WalkFlowService {
       pauseAfterExecution: boolean;
     };
 
-    //run next node validator
-    await sendNode(nextNode);
-
-    this.user = await userService.update(this.user.phone_number, {
-      ...this.user,
-      node_id: nextNode.id,
-      node_meta: {},
-      nudge_id:
-        nextNode.nudge === "inherit"
-          ? this.user.nudge_id
-          : nextNode.nudge === "none"
-          ? undefined
-          : nextNode.nudge,
-      ...(currentNode.type === AppNodeKey.END_NODE_KEY
-        ? {
-            level_id: this.nodeHandlerService.flow.id,
-          }
-        : {}),
-    });
-
-    //also prevent infinite loops for last end node in last level
-    if (
-      !pauseAfterExecution &&
-      nextNode.type !== AppNodeKey.END_NODE_KEY &&
-      currentNode.id === nextNode.id
-    ) {
-      this.walk(userInput);
-    }
+    return {
+      nextNode,
+      sendNextNode: sendNode,
+      currentNode,
+      pauseAfterSendNextNode: pauseAfterExecution,
+    };
   };
 }
 

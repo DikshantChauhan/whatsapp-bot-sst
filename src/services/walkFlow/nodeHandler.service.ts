@@ -2,8 +2,6 @@ import { User } from "../../db/user.db";
 import { userService } from "../db/user.service";
 import { GetNextNodeHandler } from "./walkFlow.service";
 import { AppNode, AppNodeKey, DelayNode, Edge, Flow } from "./typings";
-import { campaignService } from "../db/campaign.service";
-import { flowService } from "../db/flow.service";
 
 class NodeHandlerService {
   flow: Flow;
@@ -147,30 +145,30 @@ class NodeHandlerService {
       return nextNode;
     };
 
-  public endNodeHandler: GetNextNodeHandler<AppNodeKey.END_NODE_KEY> = async ({
+  public endNodeHandler: GetNextNodeHandler<AppNodeKey.END_NODE_KEY> = ({
     node,
-    user,
   }) => {
-    const campaign = await campaignService.getOrFail(user.campaign_id);
+    // const campaign = await campaignService.getOrFail(user.campaign_id);
 
-    const currentLevelIndex = campaign.levels.findIndex(
-      (level) => level === user.level_id
-    );
-    const nextLevelId = campaign.levels[currentLevelIndex + 1];
+    // const currentLevelIndex = campaign.levels.findIndex(
+    //   (level) => level === user.level_id
+    // );
+    // const nextLevelId = campaign.levels[currentLevelIndex + 1];
 
-    if (!nextLevelId) {
-      return node;
-    }
+    // if (!nextLevelId) {
+    //   return node;
+    // }
 
-    this.flow = await flowService.getOrFail(nextLevelId);
-    const nextNode = this.getStartNode();
+    // this.flow = await flowService.getOrFail(nextLevelId);
+    // const nextNode = this.getStartNode();
 
-    if (!nextNode)
-      throw new Error(
-        `No next node found after end node id: ${node.id} with new flow-id: ${nextLevelId}`
-      );
+    // if (!nextNode)
+    //   throw new Error(
+    //     `No next node found after end node id: ${node.id} with new flow-id: ${nextLevelId}`
+    //   );
 
-    return nextNode;
+    // return nextNode;
+    return node;
   };
 
   public whatsappVideoNodeHandler: GetNextNodeHandler<AppNodeKey.WHATSAPP_VIDEO_NODE_KEY> =
@@ -193,18 +191,7 @@ class NodeHandlerService {
   public delayNodeHandler: GetNextNodeHandler<AppNodeKey.DELAY_NODE_KEY> = ({
     node,
     sourceEdges,
-    user,
   }) => {
-    const waitTill = user.node_meta?.delayWaitTill;
-
-    if (!waitTill) {
-      throw new Error(
-        `No delayWaitTill found for delay node id: ${node.id} with user: ${user.phone_number}`
-      );
-    } else if (waitTill > Date.now()) {
-      return node;
-    }
-
     const edge = sourceEdges[0];
     if (!edge) throw new Error(`No edge found for delay node id: ${node.id}`);
 
@@ -216,7 +203,7 @@ class NodeHandlerService {
     return nextNode;
   };
 
-  public setDelayNodeMeta = async (user: User, node: DelayNode) => {
+  public static setDelayNodeMeta = async (user: User, node: DelayNode) => {
     if (user.node_meta?.delayWaitTill) return;
     const { delayInSecs } = node.data;
     await userService.update(user.phone_number, {
@@ -226,6 +213,17 @@ class NodeHandlerService {
         delayWaitTill: Date.now() + delayInSecs * 1000,
       },
     });
+  };
+
+  public static isCurrentDelayNodeResolved = (user: User) => {
+    const waitTill = user.node_meta?.delayWaitTill;
+    if (!waitTill) {
+      throw new Error(`No delayWaitTill found for user: ${user.phone_number}`);
+    } else if (waitTill > Date.now()) {
+      return false;
+    } else {
+      return true;
+    }
   };
 
   public whatsappListNodeHandler: GetNextNodeHandler<AppNodeKey.WHATSAPP_LIST_NODE_KEY> =
