@@ -4,7 +4,7 @@ import { campaignService } from "../db/campaign.service";
 import { flowService } from "../db/flow.service";
 import { Campaign } from "../../db/campaign.db";
 import SendNodesService from "../whatsapp/sendNode.service";
-import { getStartNode } from "../../utils";
+import { getStartNode, parseNode } from "../../utils";
 import { FlowType } from "../../db/flow.db";
 
 export type SendNodeHandler<P extends AppNodeKey> = (
@@ -42,8 +42,12 @@ class NodeHandlerService extends SendNodesService {
     return this.campaign;
   };
 
-  public getNodeById = (id: string): AppNode | undefined => {
-    return this.flow.data.nodes.find((node: AppNode) => node.id === id);
+  public getNodeById = (id: string): AppNode | void => {
+    const node = this.flow.data.nodes.find((node: AppNode) => node.id === id);
+
+    if (node) {
+      return parseNode(node, { user: this.user });
+    }
   };
 
   public getNodeByIdOrFail = (id: string): AppNode => {

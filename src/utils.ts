@@ -4,7 +4,6 @@ import { v4 as uuidv4 } from "uuid";
 import { User } from "./db/user.db";
 import { campaignService } from "./services/db/campaign.service";
 import { flowService } from "./services/db/flow.service";
-import NodeHandlerService from "./services/walkFlow/nodeHandler.service";
 import { AppNode, AppNodeKey, Flow } from "./services/walkFlow/typings";
 export const getWhatsAppBaseURL = () => {
   return `${WHATSAPP_API_BASE_URL}/${PHONE_NUMBER_ID}/messages`;
@@ -74,4 +73,26 @@ export const getDefaultUser = async (
     session_expires_at: Date.now() + 1000 * 60 * 60 * 24,
     campaign_id: campaign_Id,
   };
+};
+
+export const parseNode = (
+  node: AppNode,
+  map: {
+    user: User;
+  }
+): AppNode => {
+  const data = JSON.stringify(node.data);
+  const parsedData = data.replace(/\${(.*?)}/g, (_, key: string) => {
+    const [entityName, entityKey] = key.split(".").map((s) => s.trim());
+
+    try {
+      const entity = map[entityName as keyof typeof map];
+      const value = entity[entityKey as keyof typeof entity];
+      return String(value);
+    } catch (e) {
+      throw new Error(`parsing map[${entityName}][${entityKey}]`);
+    }
+  });
+
+  return { ...node, data: JSON.parse(parsedData) };
 };
