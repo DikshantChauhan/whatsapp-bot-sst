@@ -1,23 +1,55 @@
 import { User } from "../../db/user.db";
-import { userService } from "../db/user.service";
-import { GetNextNodeHandler } from "./walkFlow.service";
-import { AppNode, AppNodeKey, DelayNode, Edge, Flow } from "./typings";
+import { AppNode, AppNodeKey, Edge, Flow } from "./typings";
+import { campaignService } from "../db/campaign.service";
+import { flowService } from "../db/flow.service";
+import { Campaign } from "../../db/campaign.db";
+import SendNodesService from "../whatsapp/sendNode.service";
+import { getStartNode } from "../../utils";
+import { FlowType } from "../../db/flow.db";
 
-class NodeHandlerService {
-  flow: Flow;
+export type SendNodeHandler<P extends AppNodeKey> = (
+  node: Extract<AppNode, { type: P }>
+) => Promise<void>;
 
-  constructor(flow: Flow) {
-    this.flow = flow;
+export type GetNextNodeHandler<P extends AppNodeKey> = (data: {
+  currentNode: Extract<AppNode, { type: P }>;
+  input?: string;
+  sourceEdges: Edge[];
+}) => Promise<AppNode>;
+
+type NodeHandlerMap = {
+  [K in AppNodeKey]: {
+    [T in (typeof FlowType)[number]]?: {
+      getNextNode: GetNextNodeHandler<K>;
+      sendNode: SendNodeHandler<K>;
+      pauseAfterExecution: boolean;
+    };
+  };
+};
+
+class NodeHandlerService extends SendNodesService {
+  campaign?: Campaign;
+
+  constructor(payload: { flow: Flow; campaign?: Campaign; user: User }) {
+    super(payload.user, payload.flow);
+
+    this.campaign = payload.campaign;
   }
 
-  public getStartNode = (): AppNode | undefined => {
-    return this.flow.data.nodes.find(
-      (node: AppNode) => node.type === AppNodeKey.START_NODE_KEY
-    );
+  getOrFetchCampaign = async (): Promise<Campaign> => {
+    if (this.campaign) return this.campaign;
+    this.campaign = await campaignService.getOrFail(this.user.campaign_id);
+    return this.campaign;
   };
 
   public getNodeById = (id: string): AppNode | undefined => {
     return this.flow.data.nodes.find((node: AppNode) => node.id === id);
+  };
+
+  public getNodeByIdOrFail = (id: string): AppNode => {
+    const node = this.getNodeById(id);
+    if (!node) throw new Error(`No node found for id: ${id}`);
+    return node;
   };
 
   public getNodeSourceEdges = (nodeId: string): Edge[] => {
@@ -27,103 +59,79 @@ class NodeHandlerService {
     return sourceEdges;
   };
 
-  public ifElseNodeHandler: GetNextNodeHandler<AppNodeKey.IF_ELSE_NODE_KEY> = ({
-    node,
-    input,
-    sourceEdges,
-  }) => {
-    if (!input) throw new Error("Input is required for if-else node");
+  private ifElseNodeHandler: GetNextNodeHandler<AppNodeKey.IF_ELSE_NODE_KEY> =
+    async ({ currentNode, input, sourceEdges }) => {
+      if (!input) throw new Error("Input is required for if-else node");
 
-    const { conditions } = node.data;
-    let matchingIndex = conditions.findIndex(
-      (condition) => condition === input
-    );
-
-    //handle else case
-    matchingIndex =
-      matchingIndex === -1 ? conditions.length - 1 : matchingIndex;
-
-    const edge = sourceEdges.find(
-      ({ sourceHandle }) => sourceHandle === matchingIndex.toString()
-    );
-
-    if (!edge)
-      throw new Error(
-        `No edge found for if-else node id: ${node.id} with input: ${input}`
+      const { conditions } = currentNode.data;
+      let matchingIndex = conditions.findIndex(
+        (condition) => condition === input
       );
 
-    const nextNode = this.getNodeById(edge.target);
-    if (!nextNode)
-      throw new Error(
-        `No next node found for if-else node id: ${node.id} with edge: ${edge} and input: ${input}`
+      //handle else case
+      matchingIndex =
+        matchingIndex === -1 ? conditions.length - 1 : matchingIndex;
+
+      const edge = sourceEdges.find(
+        ({ sourceHandle }) => sourceHandle === matchingIndex.toString()
       );
-
-    return nextNode;
-  };
-
-  public messageNodeHandler: GetNextNodeHandler<AppNodeKey.MESSAGE_NODE_KEY> =
-    ({ node, sourceEdges }) => {
-      const edge = sourceEdges[0];
 
       if (!edge)
-        throw new Error(`No edge found for message node id: ${node.id}`);
-
-      const nextNode = this.getNodeById(edge.target);
-
-      if (!nextNode)
         throw new Error(
-          `No next node found for message node id: ${node.id} with edge: ${edge}`
+          `No edge found for if-else node id: ${currentNode.id} with input: ${input}`
         );
+
+      const nextNode = this.getNodeByIdOrFail(edge.target);
 
       return nextNode;
     };
 
-  public startNodeHandler: GetNextNodeHandler<AppNodeKey.START_NODE_KEY> = ({
-    node,
-    sourceEdges,
-  }) => {
-    const edge = sourceEdges[0];
+  private messageNodeHandler: GetNextNodeHandler<AppNodeKey.MESSAGE_NODE_KEY> =
+    async ({ currentNode, sourceEdges }) => {
+      const edge = sourceEdges[0];
 
-    if (!edge) throw new Error(`No edge found for start node id: ${node.id}`);
+      if (!edge)
+        throw new Error(`No edge found for message node id: ${currentNode.id}`);
 
-    const nextNode = this.getNodeById(edge.target);
+      const nextNode = this.getNodeByIdOrFail(edge.target);
 
-    if (!nextNode)
-      throw new Error(
-        `No next node found for start node id: ${node.id} with edge: ${edge}`
-      );
+      return nextNode;
+    };
 
-    return nextNode;
-  };
+  private startNodeHandler: GetNextNodeHandler<AppNodeKey.START_NODE_KEY> =
+    async ({ currentNode, sourceEdges }) => {
+      const edge = sourceEdges[0];
 
-  public promptNodeHandler: GetNextNodeHandler<AppNodeKey.PROMPT_NODE_KEY> = ({
-    node,
-    sourceEdges,
-  }) => {
-    const edge = sourceEdges[0];
+      if (!edge)
+        throw new Error(`No edge found for start node id: ${currentNode.id}`);
 
-    if (!edge) throw new Error(`No edge found for prompt node id: ${node.id}`);
+      const nextNode = this.getNodeByIdOrFail(edge.target);
 
-    const nextNode = this.getNodeById(edge.target);
+      return nextNode;
+    };
 
-    if (!nextNode)
-      throw new Error(
-        `No next node found for prompt node id: ${node.id} with edge: ${edge}`
-      );
+  private promptNodeHandler: GetNextNodeHandler<AppNodeKey.PROMPT_NODE_KEY> =
+    async ({ currentNode, sourceEdges }) => {
+      const edge = sourceEdges[0];
 
-    return nextNode;
-  };
+      if (!edge)
+        throw new Error(`No edge found for prompt node id: ${currentNode.id}`);
 
-  public whatsappButtonNodeHandler: GetNextNodeHandler<AppNodeKey.WHATSAPP_BUTTON_NODE_KEY> =
-    ({ node, sourceEdges, input }) => {
+      const nextNode = this.getNodeByIdOrFail(edge.target);
+
+      return nextNode;
+    };
+
+  private whatsappButtonNodeHandler: GetNextNodeHandler<AppNodeKey.WHATSAPP_BUTTON_NODE_KEY> =
+    async ({ currentNode, sourceEdges, input }) => {
       if (!input) throw new Error("Input is required for whatsapp button node");
-      const { buttons } = node.data;
+      const { buttons } = currentNode.data;
 
       const matchingIndex = buttons.findIndex((option) => option === input);
 
       if (matchingIndex === -1) {
         //No matching option found
-        return node;
+        return currentNode;
       }
 
       const edge = sourceEdges.find(
@@ -132,93 +140,90 @@ class NodeHandlerService {
 
       if (!edge)
         throw new Error(
-          `No edge found for whatsapp button node id: ${node.id} with edge: ${edge} and input: ${input}`
+          `No edge found for whatsapp button node id: ${currentNode.id} with edge: ${edge} and input: ${input}`
         );
 
-      const nextNode = this.getNodeById(edge.target);
-
-      if (!nextNode)
-        throw new Error(
-          `No next node found for whatsapp button node id: ${node.id} with edge: ${edge} and input: ${input}`
-        );
+      const nextNode = this.getNodeByIdOrFail(edge.target);
 
       return nextNode;
     };
 
-  public endNodeHandler: GetNextNodeHandler<AppNodeKey.END_NODE_KEY> = ({
-    node,
-  }) => {
-    // const campaign = await campaignService.getOrFail(user.campaign_id);
+  private levelEndNodeHandler: GetNextNodeHandler<AppNodeKey.END_NODE_KEY> =
+    async ({ currentNode }) => {
+      const campaign = await this.getOrFetchCampaign();
 
-    // const currentLevelIndex = campaign.levels.findIndex(
-    //   (level) => level === user.level_id
-    // );
-    // const nextLevelId = campaign.levels[currentLevelIndex + 1];
+      const currentLevelIndex = campaign.levels.findIndex(
+        (level) => level === this.user.level_id
+      );
+      const nextLevelId = campaign.levels[currentLevelIndex + 1];
 
-    // if (!nextLevelId) {
-    //   return node;
-    // }
+      if (!nextLevelId) {
+        return currentNode;
+      }
 
-    // this.flow = await flowService.getOrFail(nextLevelId);
-    // const nextNode = this.getStartNode();
+      //update the flow for next level
+      this.flow = await flowService.getOrFail(nextLevelId);
+      const nextStartNode = getStartNode(this.flow);
 
-    // if (!nextNode)
-    //   throw new Error(
-    //     `No next node found after end node id: ${node.id} with new flow-id: ${nextLevelId}`
-    //   );
+      if (!nextStartNode)
+        throw new Error(
+          `No next node found after end node id: ${currentNode.id} with new flow-id: ${nextLevelId}`
+        );
 
-    // return nextNode;
-    return node;
-  };
+      return nextStartNode;
+    };
 
-  public whatsappVideoNodeHandler: GetNextNodeHandler<AppNodeKey.WHATSAPP_VIDEO_NODE_KEY> =
-    ({ node, sourceEdges }) => {
+  private nudgeEndNodeHandler: GetNextNodeHandler<AppNodeKey.END_NODE_KEY> =
+    async ({ currentNode }) => currentNode;
+
+  private whatsappVideoNodeHandler: GetNextNodeHandler<AppNodeKey.WHATSAPP_VIDEO_NODE_KEY> =
+    async ({ currentNode, sourceEdges }) => {
       const edge = sourceEdges[0];
 
       if (!edge)
-        throw new Error(`No edge found for whatsapp video node id: ${node.id}`);
-
-      const nextNode = this.getNodeById(edge.target);
-
-      if (!nextNode)
         throw new Error(
-          `No next node found for whatsapp video node id: ${node.id} with edge: ${edge}`
+          `No edge found for whatsapp video node id: ${currentNode.id}`
         );
+
+      const nextNode = this.getNodeByIdOrFail(edge.target);
 
       return nextNode;
     };
 
-  public delayNodeHandler: GetNextNodeHandler<AppNodeKey.DELAY_NODE_KEY> = ({
-    node,
-    sourceEdges,
-  }) => {
-    const edge = sourceEdges[0];
-    if (!edge) throw new Error(`No edge found for delay node id: ${node.id}`);
+  private levelDelayNodeHandler: GetNextNodeHandler<AppNodeKey.DELAY_NODE_KEY> =
+    async ({ currentNode, sourceEdges }) => {
+      if (this.isLevelDelayResolved()) {
+        await this.updateUser({ node_meta: {} });
+        const edge = sourceEdges[0];
 
-    const nextNode = this.getNodeById(edge.target);
-    if (!nextNode)
-      throw new Error(
-        `No next node found for delay node id: ${node.id} with edge: ${edge}`
-      );
-    return nextNode;
-  };
+        if (!edge)
+          throw new Error(`No edge found for delay node id: ${currentNode.id}`);
 
-  public static setDelayNodeMeta = async (user: User, node: DelayNode) => {
-    if (user.node_meta?.delayWaitTill) return;
-    const { delayInSecs } = node.data;
-    await userService.update(user.phone_number, {
-      ...user,
-      node_meta: {
-        ...(user.node_meta || {}),
-        delayWaitTill: Date.now() + delayInSecs * 1000,
-      },
-    });
-  };
+        const nextNode = this.getNodeByIdOrFail(edge.target);
 
-  public static isCurrentDelayNodeResolved = (user: User) => {
-    const waitTill = user.node_meta?.delayWaitTill;
+        return nextNode;
+      }
+
+      return currentNode;
+    };
+
+  private nudgeDelayNodeHandler: GetNextNodeHandler<AppNodeKey.DELAY_NODE_KEY> =
+    async ({ currentNode, sourceEdges }) => {
+      const edge = sourceEdges[0];
+
+      if (!edge)
+        throw new Error(`No edge found for delay node id: ${currentNode.id}`);
+
+      const nextNode = this.getNodeByIdOrFail(edge.target);
+
+      return nextNode;
+    };
+
+  private isLevelDelayResolved = (): boolean => {
+    const waitTill = this.user.node_meta?.delay_wait_till_unix;
     if (!waitTill) {
-      throw new Error(`No delayWaitTill found for user: ${user.phone_number}`);
+      console.log(`No delayWaitTill found for user: ${this.user.phone_number}`);
+      return true;
     } else if (waitTill > Date.now()) {
       return false;
     } else {
@@ -226,8 +231,109 @@ class NodeHandlerService {
     }
   };
 
-  public whatsappListNodeHandler: GetNextNodeHandler<AppNodeKey.WHATSAPP_LIST_NODE_KEY> =
+  private whatsappListNodeHandler: GetNextNodeHandler<AppNodeKey.WHATSAPP_LIST_NODE_KEY> =
     this.whatsappButtonNodeHandler as any;
+
+  getNodesHandlerMap = () => {
+    const map: NodeHandlerMap = {
+      [AppNodeKey.IF_ELSE_NODE_KEY]: {
+        level: {
+          getNextNode: this.ifElseNodeHandler,
+          pauseAfterExecution: false,
+          sendNode: this.logAndUpdateUserAfterLevelWalk,
+        },
+      },
+      [AppNodeKey.MESSAGE_NODE_KEY]: {
+        level: {
+          getNextNode: this.messageNodeHandler,
+          pauseAfterExecution: false,
+          sendNode: this.sendLevelMessageNode,
+        },
+        nudge: {
+          getNextNode: this.messageNodeHandler,
+          pauseAfterExecution: false,
+          sendNode: this.sendNudgeMessageNode,
+        },
+      },
+      [AppNodeKey.START_NODE_KEY]: {
+        level: {
+          getNextNode: this.startNodeHandler,
+          pauseAfterExecution: false,
+          sendNode: this.sendLevelStartNode,
+        },
+        nudge: {
+          getNextNode: this.startNodeHandler,
+          pauseAfterExecution: false,
+          sendNode: this.sendNudgeStartNode,
+        },
+      },
+      [AppNodeKey.PROMPT_NODE_KEY]: {
+        level: {
+          getNextNode: this.promptNodeHandler,
+          pauseAfterExecution: true,
+          sendNode: this.sendLevelPromptNode,
+        },
+      },
+      [AppNodeKey.WHATSAPP_VIDEO_NODE_KEY]: {
+        level: {
+          getNextNode: this.whatsappVideoNodeHandler,
+          pauseAfterExecution: false,
+          sendNode: this.sendLevelVideoNode,
+        },
+      },
+      [AppNodeKey.DELAY_NODE_KEY]: {
+        level: {
+          getNextNode: this.levelDelayNodeHandler,
+          pauseAfterExecution: true,
+          sendNode: this.sendLevelDelayNode,
+        },
+        nudge: {
+          getNextNode: this.nudgeDelayNodeHandler,
+          pauseAfterExecution: true,
+          sendNode: this.sendNudgeDelayNode,
+        },
+      },
+      [AppNodeKey.WHATSAPP_LIST_NODE_KEY]: {
+        level: {
+          getNextNode: this.whatsappListNodeHandler,
+          pauseAfterExecution: true,
+          sendNode: this.sendLevelListNode,
+        },
+      },
+      [AppNodeKey.WHATSAPP_BUTTON_NODE_KEY]: {
+        level: {
+          getNextNode: this.whatsappButtonNodeHandler,
+          pauseAfterExecution: true,
+          sendNode: this.sendLevelButtonNode,
+        },
+      },
+      [AppNodeKey.END_NODE_KEY]: {
+        level: {
+          getNextNode: this.levelEndNodeHandler,
+          pauseAfterExecution: false,
+          sendNode: this.sendLevelEndNode,
+        },
+        nudge: {
+          getNextNode: this.nudgeEndNodeHandler,
+          pauseAfterExecution: true,
+          sendNode: this.sendNudgeEndNode,
+        },
+      },
+    };
+
+    return map as Record<
+      AppNodeKey,
+      Record<
+        (typeof FlowType)[number],
+        | {
+            getNextNode: GetNextNodeHandler<AppNodeKey>;
+            sendNode: SendNodeHandler<AppNodeKey>;
+            pauseAfterExecution: boolean;
+          }
+        | undefined
+      >
+    >;
+  };
 }
 
 export default NodeHandlerService;

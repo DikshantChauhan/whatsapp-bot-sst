@@ -49,9 +49,10 @@ const testHandler = async (request: Request, response: Response) => {
 const createNudgeSeedHandler = async (_: Request, response: Response) => {
   try {
     const nudges = await nudgeService.create({
-      message: "Hello, how are you?",
       user_id: "1",
       reminder_time_unix: 1739988281582,
+      node_id: "1",
+      nudge_id: "1",
     });
 
     return successResponse(response, nudges);
@@ -87,7 +88,7 @@ const getPastNudgesHandler = async (request: Request, response: Response) => {
       return errorResponse(response, "greaterThanUnix is required");
     }
 
-    const nudges = await nudgeService.getPastNudges(greaterThanUnix);
+    const nudges = await nudgeService.getPastNudges(greaterThanUnix, 100);
     return successResponse(response, nudges);
   } catch (error) {
     return errorResponse(response, error);

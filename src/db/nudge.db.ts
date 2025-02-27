@@ -62,8 +62,6 @@ export const nudgeTableKeyHelper = (reminder_time_unix: number) => {
     },
   };
 
-  console.log(data);
-
   return data;
 };
 

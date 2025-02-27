@@ -5,7 +5,7 @@ import { User } from "./db/user.db";
 import { campaignService } from "./services/db/campaign.service";
 import { flowService } from "./services/db/flow.service";
 import NodeHandlerService from "./services/walkFlow/nodeHandler.service";
-import { Flow } from "./services/walkFlow/typings";
+import { AppNode, AppNodeKey, Flow } from "./services/walkFlow/typings";
 export const getWhatsAppBaseURL = () => {
   return `${WHATSAPP_API_BASE_URL}/${PHONE_NUMBER_ID}/messages`;
 };
@@ -43,6 +43,12 @@ export const generateDBId = () => {
   return uuidv4();
 };
 
+export const getStartNode = (flow: Flow): AppNode | undefined => {
+  return flow.data.nodes.find(
+    (node: AppNode) => node.type === AppNodeKey.START_NODE_KEY
+  );
+};
+
 export const getDefaultUser = async (
   phone_number: string,
   name: string
@@ -55,18 +61,16 @@ export const getDefaultUser = async (
 
   const flow = await flowService.getOrFail(startLevelId);
 
-  const startNode = new NodeHandlerService(flow as Flow).getStartNode();
+  const startNode = getStartNode(flow);
 
   if (!startNode) throw new Error("Start node not found");
-
-  const nudge = startNode.nudge || "none";
 
   return {
     phone_number,
     name,
     level_id: startLevelId,
     node_id: startNode.id,
-    nudge_id: nudge,
+    nudge_id: "ac71a954-d39f-4ca2-a599-2bd9c15217eb",
     session_expires_at: Date.now() + 1000 * 60 * 60 * 24,
     campaign_id: campaign_Id,
   };

@@ -27,7 +27,7 @@ const userEntitySchema = schema({
   level_id: string(),
   node_id: string(),
   node_meta: map({
-    delayWaitTill: number().optional(),
+    delay_wait_till_unix: number().optional(),
   })
     .optional()
     .default({}),

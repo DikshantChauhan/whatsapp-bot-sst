@@ -25,7 +25,7 @@ class NudgeService {
     return (result.Items || []) as Nudge[];
   }
 
-  async getPastNudges(greaterThanUnix: number) {
+  async getPastNudges(greaterThanUnix: number, limit: number) {
     const { pk } = nudgeTableKeyHelper(greaterThanUnix);
     const result = await this.db.table
       .build(QueryCommand)
@@ -37,6 +37,7 @@ class NudgeService {
         },
       })
       .entities(this.db.entity)
+      .options({ limit })
       .send();
 
     return (result.Items || []) as Nudge[];
