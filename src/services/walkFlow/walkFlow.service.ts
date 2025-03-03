@@ -4,11 +4,11 @@ import { Campaign } from "../../db/campaign.db";
 import { User } from "../../db/user.db";
 
 class WalkFlowService extends NodeHandlerService {
-  constructor(payload: { flow: Flow; campaign?: Campaign; user: User }) {
+  constructor(payload: { flow: Flow; campaign?: Campaign; user: User, chatInput?: string }) {
     super(payload);
   }
 
-  walk = async (currentNodeId: string, userInput?: string) => {
+  walk = async (currentNodeId: string) => {
     const nodesHandlerMap = this.getNodesHandlerMap();
     let currentNode = this.getNodeByIdOrFail(currentNodeId);
 
@@ -22,7 +22,6 @@ class WalkFlowService extends NodeHandlerService {
 
       const nextNode = await getNextNode({
         currentNode,
-        input: userInput,
         sourceEdges: this.getNodeSourceEdges(currentNode.id),
       });
       console.log({

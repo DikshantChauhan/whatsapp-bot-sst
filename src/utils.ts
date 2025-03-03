@@ -74,25 +74,3 @@ export const getDefaultUser = async (
     campaign_id: campaign_Id,
   };
 };
-
-export const parseNode = (
-  node: AppNode,
-  map: {
-    user: User;
-  }
-): AppNode => {
-  const data = JSON.stringify(node.data);
-  const parsedData = data.replace(/\${(.*?)}/g, (_, key: string) => {
-    const [entityName, entityKey] = key.split(".").map((s) => s.trim());
-
-    try {
-      const entity = map[entityName as keyof typeof map];
-      const value = entity[entityKey as keyof typeof entity];
-      return String(value);
-    } catch (e) {
-      throw new Error(`parsing map[${entityName}][${entityKey}]`);
-    }
-  });
-
-  return { ...node, data: JSON.parse(parsedData) };
-};

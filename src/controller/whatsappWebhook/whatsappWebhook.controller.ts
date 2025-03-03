@@ -19,17 +19,11 @@ const getOrCreateUser = async (phone_number: string, name: string) => {
 };
 
 const handleMessageReply = async (user: User, message: Message) => {
-  const flow = await flowService.getOrFail(user.level_id);
-  const campaign = await campaignService.getOrFail(user.campaign_id);
-  const walkFlow = new WalkFlowService({
-    flow,
-    user,
-    campaign,
-  });
+  let input: string | undefined;
 
   switch (message.type) {
     case "text":
-      await walkFlow.walk(user.node_id, message.text?.body);
+      input = message.text?.body;
       break;
 
     case "audio":
@@ -92,10 +86,10 @@ const handleMessageReply = async (user: User, message: Message) => {
       }
       switch (interactive.type) {
         case "button_reply":
-          await walkFlow.walk(user.node_id, interactive.button_reply?.title);
+          input = interactive.button_reply?.title;
           break;
         case "list_reply":
-          await walkFlow.walk(user.node_id, interactive.list_reply?.title);
+          input = interactive.list_reply?.title;
           break;
       }
       break;
@@ -103,6 +97,19 @@ const handleMessageReply = async (user: User, message: Message) => {
     default:
       console.log("Unknown message type", message.type);
       break;
+  }
+
+  if (input) {
+    const flow = await flowService.getOrFail(user.level_id);
+    const campaign = await campaignService.getOrFail(user.campaign_id);
+
+    const walkFlow = new WalkFlowService({
+      flow,
+      user,
+      campaign,
+      chatInput: input,
+    });
+    await walkFlow.walk(user.node_id);
   }
 };
 

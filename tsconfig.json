@@ -15,6 +15,6 @@
     "strictNullChecks": true,
     "useUnknownInCatchVariables": true
   },
-  "include": ["src", "sst-env.d.ts"],
+  "include": ["src"],
   "exclude": ["node_modules", ".sst"]
 }

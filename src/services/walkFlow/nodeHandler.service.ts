@@ -4,8 +4,9 @@ import { campaignService } from "../db/campaign.service";
 import { flowService } from "../db/flow.service";
 import { Campaign } from "../../db/campaign.db";
 import SendNodesService from "../whatsapp/sendNode.service";
-import { getStartNode, parseNode } from "../../utils";
+import { getStartNode } from "../../utils";
 import { FlowType } from "../../db/flow.db";
+import variableParserService from "./variableParser.service";
 
 export type SendNodeHandler<P extends AppNodeKey> = (
   node: Extract<AppNode, { type: P }>
@@ -13,7 +14,6 @@ export type SendNodeHandler<P extends AppNodeKey> = (
 
 export type GetNextNodeHandler<P extends AppNodeKey> = (data: {
   currentNode: Extract<AppNode, { type: P }>;
-  input?: string;
   sourceEdges: Edge[];
 }) => Promise<AppNode>;
 
@@ -29,11 +29,18 @@ type NodeHandlerMap = {
 
 class NodeHandlerService extends SendNodesService {
   campaign?: Campaign;
+  chatInput?: string;
 
-  constructor(payload: { flow: Flow; campaign?: Campaign; user: User }) {
+  constructor(payload: {
+    flow: Flow;
+    campaign?: Campaign;
+    user: User;
+    chatInput?: string;
+  }) {
     super(payload.user, payload.flow);
 
     this.campaign = payload.campaign;
+    this.chatInput = payload.chatInput;
   }
 
   getOrFetchCampaign = async (): Promise<Campaign> => {
@@ -46,7 +53,10 @@ class NodeHandlerService extends SendNodesService {
     const node = this.flow.data.nodes.find((node: AppNode) => node.id === id);
 
     if (node) {
-      return parseNode(node, { user: this.user });
+      return variableParserService.parseNode(node, {
+        user: this.user,
+        chat: { input: this.chatInput },
+      });
     }
   };
 
@@ -64,17 +74,20 @@ class NodeHandlerService extends SendNodesService {
   };
 
   private ifElseNodeHandler: GetNextNodeHandler<AppNodeKey.IF_ELSE_NODE_KEY> =
-    async ({ currentNode, input, sourceEdges }) => {
-      if (!input) throw new Error("Input is required for if-else node");
+    async ({ currentNode, sourceEdges }) => {
+      if (!this.chatInput)
+        throw new Error("Input is required for if-else node");
 
       const { conditions } = currentNode.data;
-      let matchingIndex = conditions.findIndex(
-        (condition) => condition === input
+      let matchingIndex = conditions.findIndex((condition) =>
+        variableParserService.checkIfElseCondition(condition, {
+          user: this.user,
+          chat: { input: this.chatInput },
+        })
       );
 
       //handle else case
-      matchingIndex =
-        matchingIndex === -1 ? conditions.length - 1 : matchingIndex;
+      matchingIndex = matchingIndex === -1 ? conditions.length : matchingIndex;
 
       const edge = sourceEdges.find(
         ({ sourceHandle }) => sourceHandle === matchingIndex.toString()
@@ -82,7 +95,7 @@ class NodeHandlerService extends SendNodesService {
 
       if (!edge)
         throw new Error(
-          `No edge found for if-else node id: ${currentNode.id} with input: ${input}`
+          `No edge found for if-else node id: ${currentNode.id} with input: ${this.chatInput}`
         );
 
       const nextNode = this.getNodeByIdOrFail(edge.target);
@@ -127,11 +140,14 @@ class NodeHandlerService extends SendNodesService {
     };
 
   private whatsappButtonNodeHandler: GetNextNodeHandler<AppNodeKey.WHATSAPP_BUTTON_NODE_KEY> =
-    async ({ currentNode, sourceEdges, input }) => {
-      if (!input) throw new Error("Input is required for whatsapp button node");
+    async ({ currentNode, sourceEdges }) => {
+      if (!this.chatInput)
+        throw new Error("Input is required for whatsapp button node");
       const { buttons } = currentNode.data;
 
-      const matchingIndex = buttons.findIndex((option) => option === input);
+      const matchingIndex = buttons.findIndex(
+        (option) => option === this.chatInput
+      );
 
       if (matchingIndex === -1) {
         //No matching option found
@@ -144,7 +160,7 @@ class NodeHandlerService extends SendNodesService {
 
       if (!edge)
         throw new Error(
-          `No edge found for whatsapp button node id: ${currentNode.id} with edge: ${edge} and input: ${input}`
+          `No edge found for whatsapp button node id: ${currentNode.id} with edge: ${edge} and input: ${this.chatInput}`
         );
 
       const nextNode = this.getNodeByIdOrFail(edge.target);

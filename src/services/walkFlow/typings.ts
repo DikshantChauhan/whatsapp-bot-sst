@@ -47,7 +47,14 @@ export interface BaseNode<T extends AppNodeKey, D extends Record<string, any>> {
 
 export type IfElseNode = BaseNode<
   AppNodeKey.IF_ELSE_NODE_KEY,
-  { conditions: string[] }
+  {
+    conditions: {
+      variable: string;
+      condition: "==" | "!=" | ">" | "<" | ">=" | "<=";
+      type: "string" | "number" | "boolean" | "variable" | "null";
+      value: string;
+    }[];
+  }
 >;
 
 export type MessageNode = BaseNode<

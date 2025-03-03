@@ -41,6 +41,10 @@ class UserService {
   async get(phone_number: string): Promise<User | undefined> {
     return await this.db.get({ phone_number });
   }
+
+  async getOrFail(phone_number: string): Promise<User> {
+    return await this.getOrFail(phone_number);
+  }
 }
 
 export const userService = new UserService();

@@ -6,6 +6,7 @@ import {
   Table,
   map,
   GetItemResponse,
+  record,
 } from "dynamodb-toolbox";
 import documentClient from "./config";
 import { Resource } from "sst";
@@ -34,6 +35,8 @@ const userEntitySchema = schema({
   nudge_id: string(),
   session_expires_at: number(),
   campaign_id: string(),
+  // score: number().default(0),
+  // level_score: record({}).default({}),
 });
 
 const userEntity = new Entity({
