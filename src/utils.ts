@@ -72,5 +72,7 @@ export const getDefaultUser = async (
     nudge_id: "ac71a954-d39f-4ca2-a599-2bd9c15217eb",
     session_expires_at: Date.now() + 1000 * 60 * 60 * 24,
     campaign_id: campaign_Id,
+    level_score: {},
+    total_score: 0,
   };
 };

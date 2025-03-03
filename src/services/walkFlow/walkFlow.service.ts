@@ -4,7 +4,12 @@ import { Campaign } from "../../db/campaign.db";
 import { User } from "../../db/user.db";
 
 class WalkFlowService extends NodeHandlerService {
-  constructor(payload: { flow: Flow; campaign?: Campaign; user: User, chatInput?: string }) {
+  constructor(payload: {
+    flow: Flow;
+    campaign?: Campaign;
+    user: User;
+    chatInput?: string;
+  }) {
     super(payload);
   }
 
@@ -23,11 +28,6 @@ class WalkFlowService extends NodeHandlerService {
       const nextNode = await getNextNode({
         currentNode,
         sourceEdges: this.getNodeSourceEdges(currentNode.id),
-      });
-      console.log({
-        currentNode: [currentNode.id, currentNode.type, currentNode.data],
-        nextNode: [nextNode.id, nextNode.type, nextNode.data],
-        type: this.flow.type,
       });
 
       const nextNodeHandlers = nodesHandlerMap[nextNode.type][this.flow.type];

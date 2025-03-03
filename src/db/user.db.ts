@@ -35,8 +35,8 @@ const userEntitySchema = schema({
   nudge_id: string(),
   session_expires_at: number(),
   campaign_id: string(),
-  // score: number().default(0),
-  // level_score: record({}).default({}),
+  total_score: number().default(0),
+  level_score: record(string(), number()).default({}),
 });
 
 const userEntity = new Entity({

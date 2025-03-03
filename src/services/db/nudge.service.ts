@@ -6,7 +6,6 @@ class NudgeService {
   db = new DbService(nudgeDb.entity, nudgeDb.table);
 
   async create(payload: Nudge): Promise<Nudge> {
-    console.log("creating nudge", payload);
     await this.deleteByUserId(payload.user_id);
 
     return await this.db.insert(payload);

@@ -112,6 +112,7 @@ export type WhatsappListNode = BaseNode<
     footer?: string;
     header?: string;
     buttonLabel?: string;
+    correctIndex: number;
   }
 >;
 

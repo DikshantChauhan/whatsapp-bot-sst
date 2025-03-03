@@ -7,13 +7,27 @@ type EntityVariableMap = {
 };
 
 class VariableParserService {
+  getVariableMap = (map: EntityVariableMap) => {
+    return {
+      ...map,
+      user: {
+        ...map.user,
+        level_score: `${Object.values(map.user.level_score).reduce(
+          (pre, curr) => (pre || 0) + (curr || 0),
+          0
+        )}/${Object.keys(map.user.level_score).length}`,
+      },
+    };
+  };
+
   getVariableValue = (
     variable: `${string}.${string}`,
     entityMap: EntityVariableMap
   ) => {
     const [entityName, entityKey] = variable.split(".").map((s) => s.trim());
     try {
-      const obj = entityMap[entityName as keyof EntityVariableMap];
+      const obj =
+        this.getVariableMap(entityMap)[entityName as keyof EntityVariableMap];
       return String(obj[entityKey as keyof typeof obj]);
     } catch (e) {
       throw new Error(`parsing map[${entityName}][${entityKey}]`);

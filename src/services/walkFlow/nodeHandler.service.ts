@@ -115,9 +115,26 @@ class NodeHandlerService extends SendNodesService {
       return nextNode;
     };
 
-  private startNodeHandler: GetNextNodeHandler<AppNodeKey.START_NODE_KEY> =
+  private nudgeStartNodeHandler: GetNextNodeHandler<AppNodeKey.START_NODE_KEY> =
     async ({ currentNode, sourceEdges }) => {
       const edge = sourceEdges[0];
+
+      if (!edge)
+        throw new Error(`No edge found for start node id: ${currentNode.id}`);
+
+      const nextNode = this.getNodeByIdOrFail(edge.target);
+
+      return nextNode;
+    };
+
+  private levelStartNodeHandler: GetNextNodeHandler<AppNodeKey.START_NODE_KEY> =
+    async ({ currentNode, sourceEdges }) => {
+      const edge = sourceEdges[0];
+
+      //clear the user score
+      await this.updateUser({
+        level_score: {},
+      });
 
       if (!edge)
         throw new Error(`No edge found for start node id: ${currentNode.id}`);
@@ -252,7 +269,45 @@ class NodeHandlerService extends SendNodesService {
   };
 
   private whatsappListNodeHandler: GetNextNodeHandler<AppNodeKey.WHATSAPP_LIST_NODE_KEY> =
-    this.whatsappButtonNodeHandler as any;
+    async ({ currentNode, sourceEdges }) => {
+      if (!this.chatInput)
+        throw new Error("Input is required for whatsapp list node");
+      const { buttons, correctIndex } = currentNode.data;
+
+      const matchingIndex = buttons.findIndex(
+        (option) => option === this.chatInput
+      );
+
+      if (matchingIndex === -1) {
+        //No matching option found
+        return currentNode;
+      }
+
+      const edge = sourceEdges.find(
+        (edge) => edge.sourceHandle?.toString() === matchingIndex.toString()
+      );
+
+      //update the user score
+      if (matchingIndex === correctIndex) {
+        const isAlreadyMarked = this.user.level_score[currentNode.id];
+
+        if (!isAlreadyMarked) {
+          await this.updateUser({
+            level_score: { ...this.user.level_score, [currentNode.id]: 1 },
+            total_score: this.user.total_score + 1,
+          });
+        }
+      }
+
+      if (!edge)
+        throw new Error(
+          `No edge found for whatsapp button node id: ${currentNode.id} with edge: ${edge} and input: ${this.chatInput}`
+        );
+
+      const nextNode = this.getNodeByIdOrFail(edge.target);
+
+      return nextNode;
+    };
 
   getNodesHandlerMap = () => {
     const map: NodeHandlerMap = {
@@ -277,12 +332,12 @@ class NodeHandlerService extends SendNodesService {
       },
       [AppNodeKey.START_NODE_KEY]: {
         level: {
-          getNextNode: this.startNodeHandler,
+          getNextNode: this.levelStartNodeHandler,
           pauseAfterExecution: false,
           sendNode: this.sendLevelStartNode,
         },
         nudge: {
-          getNextNode: this.startNodeHandler,
+          getNextNode: this.nudgeStartNodeHandler,
           pauseAfterExecution: false,
           sendNode: this.sendNudgeStartNode,
         },
