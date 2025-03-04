@@ -34,6 +34,7 @@ export enum AppNodeKey {
   WHATSAPP_VIDEO_NODE_KEY = "whatsapp-video",
   DELAY_NODE_KEY = "delay",
   WHATSAPP_LIST_NODE_KEY = "whatsapp-list",
+  WHATSAPP_DOCUMENT_NODE_KEY = "whatsapp-document",
 }
 
 export type SubFlowValue = "inherit" | "none" | (string & {});
@@ -116,6 +117,11 @@ export type WhatsappListNode = BaseNode<
   }
 >;
 
+export type WhatsappDocumentNode = BaseNode<
+  AppNodeKey.WHATSAPP_DOCUMENT_NODE_KEY,
+  { id: string }
+>;
+
 export type AppNode =
   | IfElseNode
   | MessageNode
@@ -125,4 +131,5 @@ export type AppNode =
   | WhatsappButtonNode
   | WhatsappVideoNode
   | DelayNode
-  | WhatsappListNode;
+  | WhatsappListNode
+  | WhatsappDocumentNode;

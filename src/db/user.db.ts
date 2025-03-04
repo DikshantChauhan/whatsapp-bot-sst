@@ -37,6 +37,7 @@ const userEntitySchema = schema({
   campaign_id: string(),
   total_score: number().default(0),
   level_score: record(string(), number()).default({}),
+  age: number().optional(),
 });
 
 const userEntity = new Entity({

@@ -207,6 +207,19 @@ class SendNodesService extends WhatsappMessages {
 
       await this.updateUserAfterLevelWalk(node);
     };
+
+  protected sendLevelWhatsappDocumentNode: SendNodeHandler<AppNodeKey.WHATSAPP_DOCUMENT_NODE_KEY> =
+    async (node) => {
+      const { id } = node.data;
+      await this.sendMediaMessage(
+        this.user.phone_number,
+        "document",
+        id,
+        "id",
+        ""
+      );
+      await this.updateUserAfterLevelWalk(node);
+    };
 }
 
 export default SendNodesService;

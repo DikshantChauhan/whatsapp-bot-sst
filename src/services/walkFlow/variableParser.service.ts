@@ -28,7 +28,8 @@ class VariableParserService {
     try {
       const obj =
         this.getVariableMap(entityMap)[entityName as keyof EntityVariableMap];
-      return String(obj[entityKey as keyof typeof obj]);
+      const value = obj?.[entityKey as keyof typeof obj];
+      return value === undefined || value === null ? undefined : String(value);
     } catch (e) {
       throw new Error(`parsing map[${entityName}][${entityKey}]`);
     }
@@ -38,7 +39,7 @@ class VariableParserService {
     const data = JSON.stringify(node.data);
     const parsedData = data.replace(/\${(.*?)}/g, (_, variable) => {
       const value = this.getVariableValue(variable, map);
-      return value;
+      return value || "";
     });
 
     return { ...node, data: JSON.parse(parsedData) };
@@ -62,19 +63,27 @@ class VariableParserService {
         ? condition.value === "true"
         : this.getVariableValue(condition.value as `${string}.${string}`, map);
 
+    const numLhs = Number(lhs);
+    const numRhs = Number(rhs);
+    console.log({ lhs, rhs, operator, numLhs, numRhs });
+
     switch (operator) {
       case "!=":
         return lhs != rhs;
       case "==":
         return lhs == rhs;
-      case ">":
-        return lhs > rhs!;
-      case ">=":
-        return lhs >= rhs!;
-      case "<":
-        return lhs < rhs!;
-      case "<=":
-        return lhs <= rhs!;
+      case ">": {
+        return !isNaN(numLhs) && !isNaN(numRhs) ? numLhs > numRhs : false;
+      }
+      case ">=": {
+        return !isNaN(numLhs) && !isNaN(numRhs) ? numLhs >= numRhs : false;
+      }
+      case "<": {
+        return !isNaN(numLhs) && !isNaN(numRhs) ? numLhs < numRhs : false;
+      }
+      case "<=": {
+        return !isNaN(numLhs) && !isNaN(numRhs) ? numLhs <= numRhs : false;
+      }
       default:
         return false;
     }

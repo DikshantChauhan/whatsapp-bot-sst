@@ -309,6 +309,20 @@ class NodeHandlerService extends SendNodesService {
       return nextNode;
     };
 
+  private levelWhatsappDocumentNodeHandler: GetNextNodeHandler<AppNodeKey.WHATSAPP_DOCUMENT_NODE_KEY> =
+    async ({ currentNode, sourceEdges }) => {
+      const edge = sourceEdges[0];
+
+      if (!edge)
+        throw new Error(
+          `No edge found for whatsapp document node id: ${currentNode.id}`
+        );
+
+      const nextNode = this.getNodeByIdOrFail(edge.target);
+
+      return nextNode;
+    };
+
   getNodesHandlerMap = () => {
     const map: NodeHandlerMap = {
       [AppNodeKey.IF_ELSE_NODE_KEY]: {
@@ -392,6 +406,13 @@ class NodeHandlerService extends SendNodesService {
           getNextNode: this.nudgeEndNodeHandler,
           pauseAfterExecution: true,
           sendNode: this.sendNudgeEndNode,
+        },
+      },
+      [AppNodeKey.WHATSAPP_DOCUMENT_NODE_KEY]: {
+        level: {
+          getNextNode: this.levelWhatsappDocumentNodeHandler,
+          pauseAfterExecution: false,
+          sendNode: this.sendLevelWhatsappDocumentNode,
         },
       },
     };
