@@ -29,6 +29,7 @@ const userEntitySchema = schema({
   node_id: string(),
   node_meta: map({
     delay_wait_till_unix: number().optional(),
+    prompt_input: string().optional(),
   })
     .optional()
     .default({}),

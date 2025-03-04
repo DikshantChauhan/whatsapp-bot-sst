@@ -74,5 +74,7 @@ export const getDefaultUser = async (
     campaign_id: campaign_Id,
     level_score: {},
     total_score: 0,
+    node_meta: {},
+    age: undefined,
   };
 };

@@ -17,6 +17,9 @@ class VariableParserService {
           0
         )}/${Object.keys(map.user.level_score).length}`,
       },
+      prompt: {
+        input: map.user.node_meta?.prompt_input,
+      },
     };
   };
 

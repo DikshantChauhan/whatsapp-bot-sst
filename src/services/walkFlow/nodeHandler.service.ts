@@ -146,6 +146,13 @@ class NodeHandlerService extends SendNodesService {
 
   private promptNodeHandler: GetNextNodeHandler<AppNodeKey.PROMPT_NODE_KEY> =
     async ({ currentNode, sourceEdges }) => {
+      await this.updateUser({
+        node_meta: {
+          ...(this.user.node_meta || {}),
+          prompt_input: this.chatInput,
+        },
+      });
+
       const edge = sourceEdges[0];
 
       if (!edge)
@@ -230,7 +237,12 @@ class NodeHandlerService extends SendNodesService {
   private levelDelayNodeHandler: GetNextNodeHandler<AppNodeKey.DELAY_NODE_KEY> =
     async ({ currentNode, sourceEdges }) => {
       if (this.isLevelDelayResolved()) {
-        await this.updateUser({ node_meta: {} });
+        await this.updateUser({
+          node_meta: {
+            ...(this.user.node_meta || {}),
+            delay_wait_till_unix: undefined,
+          },
+        });
         const edge = sourceEdges[0];
 
         if (!edge)
@@ -288,15 +300,17 @@ class NodeHandlerService extends SendNodesService {
       );
 
       //update the user score
-      if (matchingIndex === correctIndex) {
-        const isAlreadyMarked = this.user.level_score[currentNode.id];
+      const isCorrectAnswer = matchingIndex === correctIndex;
+      const isAlreadyMarked = this.user.level_score[currentNode.id];
 
-        if (!isAlreadyMarked) {
-          await this.updateUser({
-            level_score: { ...this.user.level_score, [currentNode.id]: 1 },
-            total_score: this.user.total_score + 1,
-          });
-        }
+      if (!isAlreadyMarked) {
+        await this.updateUser({
+          level_score: {
+            ...this.user.level_score,
+            [currentNode.id]: isCorrectAnswer ? 1 : 0,
+          },
+          total_score: this.user.total_score + (isCorrectAnswer ? 1 : 0),
+        });
       }
 
       if (!edge)
@@ -316,6 +330,20 @@ class NodeHandlerService extends SendNodesService {
       if (!edge)
         throw new Error(
           `No edge found for whatsapp document node id: ${currentNode.id}`
+        );
+
+      const nextNode = this.getNodeByIdOrFail(edge.target);
+
+      return nextNode;
+    };
+
+  private levelWhatsappUserUpdateNodeHandler: GetNextNodeHandler<AppNodeKey.WHATSAPP_USER_UPDATE_NODE_KEY> =
+    async ({ currentNode, sourceEdges }) => {
+      const edge = sourceEdges[0];
+
+      if (!edge)
+        throw new Error(
+          `No edge found for whatsapp user update node id: ${currentNode.id}`
         );
 
       const nextNode = this.getNodeByIdOrFail(edge.target);
@@ -413,6 +441,13 @@ class NodeHandlerService extends SendNodesService {
           getNextNode: this.levelWhatsappDocumentNodeHandler,
           pauseAfterExecution: false,
           sendNode: this.sendLevelWhatsappDocumentNode,
+        },
+      },
+      [AppNodeKey.WHATSAPP_USER_UPDATE_NODE_KEY]: {
+        level: {
+          getNextNode: this.levelWhatsappUserUpdateNodeHandler,
+          pauseAfterExecution: false,
+          sendNode: this.sendLevelWhatsappUserUpdateNode,
         },
       },
     };
