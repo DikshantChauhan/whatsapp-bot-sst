@@ -8,21 +8,34 @@ import { flowService } from "../db/flow.service";
 import { getStartNode } from "../../utils";
 import { nudgeService } from "../db/nudge.service";
 import { FlowType } from "../../db/flow.db";
+import { Campaign } from "../../db/campaign.db";
 
 class SendNodesService extends WhatsappMessages {
   user: User;
   flow: Flow;
+  campaign?: Campaign;
 
-  constructor(user: User, flow: Flow) {
+  constructor(user: User, flow: Flow, campaign?: Campaign) {
     super();
     this.user = user;
     this.flow = flow;
+    this.campaign = campaign;
   }
 
   updateUser = async (payload: Partial<User>) => {
+    const maxLevelId =
+      payload.max_level_id ||
+      (payload.level_id &&
+        this.campaign &&
+        this.campaign.levels.indexOf(payload.level_id) >
+          this.campaign.levels.indexOf(this.user.max_level_id))
+        ? payload.level_id
+        : this.user.max_level_id;
+
     this.user = await userService.update(this.user.phone_number, {
       ...this.user,
       ...payload,
+      max_level_id: maxLevelId,
     });
   };
 
@@ -96,9 +109,10 @@ class SendNodesService extends WhatsappMessages {
 
   private setLevelDelayNodeMetaOrFail = async (node: DelayNode) => {
     if (this.user.node_meta?.delay_wait_till_unix) {
-      throw new Error(
-        `Delay wait till already set for user: ${this.user.phone_number}`
-      );
+      // throw new Error(
+      //   `Delay wait till already set for user: ${this.user.phone_number}`
+      // );
+      return;
     }
 
     const { delayInSecs } = node.data;

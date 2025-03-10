@@ -39,6 +39,7 @@ const userEntitySchema = schema({
   total_score: number().default(0),
   level_score: record(string(), number()).default({}),
   age: number().optional(),
+  max_level_id: string(),
 });
 
 const userEntity = new Entity({

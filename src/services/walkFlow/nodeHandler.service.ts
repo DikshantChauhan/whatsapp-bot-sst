@@ -28,7 +28,6 @@ type NodeHandlerMap = {
 };
 
 class NodeHandlerService extends SendNodesService {
-  campaign?: Campaign;
   chatInput?: string;
 
   constructor(payload: {
@@ -37,9 +36,8 @@ class NodeHandlerService extends SendNodesService {
     user: User;
     chatInput?: string;
   }) {
-    super(payload.user, payload.flow);
+    super(payload.user, payload.flow, payload.campaign);
 
-    this.campaign = payload.campaign;
     this.chatInput = payload.chatInput;
   }
 
@@ -269,7 +267,12 @@ class NodeHandlerService extends SendNodesService {
     };
 
   private isLevelDelayResolved = (): boolean => {
+    //TODO: test delay node in level flow
     const waitTill = this.user.node_meta?.delay_wait_till_unix;
+    // console.log({
+    //   waitTill: new Date(waitTill!).toISOString(),
+    //   now: new Date().toISOString(),
+    // });
     if (!waitTill) {
       console.log(`No delayWaitTill found for user: ${this.user.phone_number}`);
       return true;
