@@ -52,7 +52,7 @@ export const getDefaultUser = async (
   phone_number: string,
   name: string
 ): Promise<User> => {
-  const campaign_Id = "e1ea23a0-7fee-474f-8542-312b9d94b92a";
+  const campaign_Id = "48480b39-eb31-488b-8498-ff276136cef2";
   const campaign = await campaignService.getOrFail(campaign_Id);
   const startLevelId = campaign.levels[0];
 
@@ -78,4 +78,20 @@ export const getDefaultUser = async (
     age: undefined,
     max_level_id: startLevelId,
   };
+};
+
+export const getDataFromWhatsappOwnboaringLink = (
+  str: string
+): Record<string, string> => {
+  const metadata: Record<string, string> = {};
+  const regex = /\*([^:]+):\s*([^*]+)\*/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(str)) !== null) {
+    const key = match[1]?.trim() ?? "";
+    const value = match[2]?.trim() ?? "";
+    if (key) metadata[key] = value;
+  }
+
+  return metadata;
 };

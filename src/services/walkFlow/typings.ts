@@ -36,6 +36,9 @@ export enum AppNodeKey {
   WHATSAPP_LIST_NODE_KEY = "whatsapp-list",
   WHATSAPP_DOCUMENT_NODE_KEY = "whatsapp-document",
   WHATSAPP_USER_UPDATE_NODE_KEY = "whatsapp-user-update",
+  WHATSAPP_OWNBOARDING_LINK_PARSER_NODE_KEY = "whatsapp-ownboarding-link-parser",
+  WHATSAPP_VALIDATE_DISE_CODE_NODE_KEY = "whatsapp-validate-dise-code",
+  WHATSAPP_CONFIRM_SCHOOL_NODE_KEY = "whatsapp-confirm-school",
 }
 
 export type SubFlowValue = "inherit" | "none" | (string & {});
@@ -132,6 +135,31 @@ export type WhatsappUserUpdateNode = BaseNode<
     age?: string;
   }
 >;
+
+export type WhatsappOwnboardingLinkParserNode = BaseNode<
+  AppNodeKey.WHATSAPP_OWNBOARDING_LINK_PARSER_NODE_KEY,
+  {
+    link: string;
+    paths: ["teacher", "student", "unknown"];
+  }
+>;
+
+export type WhatsappValidateDiseCodeNode = BaseNode<
+  AppNodeKey.WHATSAPP_VALIDATE_DISE_CODE_NODE_KEY,
+  {
+    diseCode: string;
+    paths: ["valid", "invalid"];
+  }
+>;
+
+export type WhatsappConfirmSchoolNode = BaseNode<
+  AppNodeKey.WHATSAPP_CONFIRM_SCHOOL_NODE_KEY,
+  {
+    text: string;
+    paths: ["No", "Ok"];
+  }
+>;
+
 export type AppNode =
   | IfElseNode
   | MessageNode
@@ -143,4 +171,7 @@ export type AppNode =
   | DelayNode
   | WhatsappListNode
   | WhatsappDocumentNode
-  | WhatsappUserUpdateNode;
+  | WhatsappUserUpdateNode
+  | WhatsappOwnboardingLinkParserNode
+  | WhatsappValidateDiseCodeNode
+  | WhatsappConfirmSchoolNode;

@@ -4,7 +4,7 @@ import { campaignService } from "../db/campaign.service";
 import { flowService } from "../db/flow.service";
 import { Campaign } from "../../db/campaign.db";
 import SendNodesService from "../whatsapp/sendNode.service";
-import { getStartNode } from "../../utils";
+import { getDataFromWhatsappOwnboaringLink, getStartNode } from "../../utils";
 import { FlowType } from "../../db/flow.db";
 import variableParserService from "./variableParser.service";
 
@@ -51,6 +51,7 @@ class NodeHandlerService extends SendNodesService {
     const node = this.flow.data.nodes.find((node: AppNode) => node.id === id);
 
     if (node) {
+      console.log(node)
       return variableParserService.parseNode(node, {
         user: this.user,
         chat: { input: this.chatInput },
@@ -354,6 +355,97 @@ class NodeHandlerService extends SendNodesService {
       return nextNode;
     };
 
+  private levelWhatsappOwnboardingLinkParserNodeHandler: GetNextNodeHandler<AppNodeKey.WHATSAPP_OWNBOARDING_LINK_PARSER_NODE_KEY> =
+    async ({ currentNode, sourceEdges }) => {
+      const { link, paths } = currentNode.data;
+
+      const { district_id, district_name, state, dise_code, school_name } =
+        getDataFromWhatsappOwnboaringLink(link);
+
+      let selectedPath: (typeof paths)[number];
+
+      if (district_id && district_name && state) {
+        selectedPath = "teacher";
+      } else if (dise_code && school_name) {
+        selectedPath = "student";
+      } else {
+        selectedPath = "unknown";
+      }
+
+      const edge = sourceEdges.find(
+        (edge) => edge.sourceHandle === paths.indexOf(selectedPath).toString()
+      );
+
+      if (!edge) {
+        throw new Error(
+          `No edge found for whatsapp ownboarding link parser node id: ${currentNode.id} and selectedPath: ${selectedPath}`
+        );
+      }
+
+      return this.getNodeByIdOrFail(edge.target);
+    };
+
+  private levelWhatsappValidateDiseCodeNodeHandler: GetNextNodeHandler<AppNodeKey.WHATSAPP_VALIDATE_DISE_CODE_NODE_KEY> =
+    async ({ currentNode, sourceEdges }) => {
+      const { diseCode, paths } = currentNode.data;
+      const ownboardingMeta = this.user.node_meta?.whatsapp_ownboarding_link;
+
+      if (!ownboardingMeta) {
+        throw new Error(`No ownboarding data found!`);
+      }
+
+      console.log("From levelWhatsappValidateDiseCodeNodeHandler: ", {
+        diseCode,
+        paths,
+        ownboardingMeta,
+      });
+      //call api with meta and diseCode and set school name
+      const schoolName = "SGRR public school";
+      schoolName &&
+        (await this.updateUser({
+          node_meta: {
+            ...(this.user.node_meta || {}),
+            whatsapp_ownboarding_link: {
+              ...(this.user.node_meta?.whatsapp_ownboarding_link || {}),
+              school_name: schoolName,
+              dise_code: diseCode,
+            },
+          },
+        }));
+      const selectedPathIndex = paths.indexOf(schoolName ? "valid" : "invalid");
+      const edge = sourceEdges[selectedPathIndex];
+
+      if (!edge) {
+        throw new Error(
+          `No edge found for whatsapp validate dise code node id: ${currentNode.id} and selectedPath: ${selectedPathIndex}`
+        );
+      }
+
+      return this.getNodeByIdOrFail(edge.target);
+    };
+
+  private levelWhatsappConfirmSchoolNodeHandler: GetNextNodeHandler<AppNodeKey.WHATSAPP_CONFIRM_SCHOOL_NODE_KEY> =
+    async ({ currentNode, sourceEdges }) => {
+      const { paths } = currentNode.data;
+      const matchingIndex = paths.findIndex((path) => path === this.chatInput);
+
+      if (matchingIndex === -1) {
+        //No matching option found
+        return currentNode;
+      }
+
+      const edge = sourceEdges.find(
+        (edge) => edge.sourceHandle?.toString() === matchingIndex.toString()
+      );
+
+      if (!edge)
+        throw new Error(
+          `No edge found for whatsapp confirm school node id: ${currentNode.id} with edge: ${edge} and input: ${this.chatInput}`
+        );
+
+      return this.getNodeByIdOrFail(edge.target);
+    };
+
   getNodesHandlerMap = () => {
     const map: NodeHandlerMap = {
       [AppNodeKey.IF_ELSE_NODE_KEY]: {
@@ -451,6 +543,27 @@ class NodeHandlerService extends SendNodesService {
           getNextNode: this.levelWhatsappUserUpdateNodeHandler,
           pauseAfterExecution: false,
           sendNode: this.sendLevelWhatsappUserUpdateNode,
+        },
+      },
+      [AppNodeKey.WHATSAPP_OWNBOARDING_LINK_PARSER_NODE_KEY]: {
+        level: {
+          getNextNode: this.levelWhatsappOwnboardingLinkParserNodeHandler,
+          pauseAfterExecution: false,
+          sendNode: this.sendLevelWhatsappOwnboardingLinkParserNode,
+        },
+      },
+      [AppNodeKey.WHATSAPP_VALIDATE_DISE_CODE_NODE_KEY]: {
+        level: {
+          getNextNode: this.levelWhatsappValidateDiseCodeNodeHandler,
+          pauseAfterExecution: false,
+          sendNode: this.logAndUpdateUserAfterLevelWalk,
+        },
+      },
+      [AppNodeKey.WHATSAPP_CONFIRM_SCHOOL_NODE_KEY]: {
+        level: {
+          getNextNode: this.levelWhatsappConfirmSchoolNodeHandler,
+          pauseAfterExecution: true,
+          sendNode: this.sendLevelWhatsappConfirmSchoolNode,
         },
       },
     };

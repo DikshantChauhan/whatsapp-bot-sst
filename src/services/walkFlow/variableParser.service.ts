@@ -27,14 +27,17 @@ class VariableParserService {
     variable: `${string}.${string}`,
     entityMap: EntityVariableMap
   ) => {
-    const [entityName, entityKey] = variable.split(".").map((s) => s.trim());
+    const keys = variable.split(".").map((s) => s.trim());
     try {
-      const obj =
-        this.getVariableMap(entityMap)[entityName as keyof EntityVariableMap];
-      const value = obj?.[entityKey as keyof typeof obj];
+      let value = this.getVariableMap(entityMap);
+
+      for (const key of keys) {
+        value = value[key as never];
+      }
+
       return value === undefined || value === null ? undefined : String(value);
     } catch (e) {
-      throw new Error(`parsing map[${entityName}][${entityKey}]`);
+      throw new Error(`Error parsing map at path: ${variable}`);
     }
   };
 
@@ -42,7 +45,7 @@ class VariableParserService {
     const data = JSON.stringify(node.data);
     const parsedData = data.replace(/\${(.*?)}/g, (_, variable) => {
       const value = this.getVariableValue(variable, map);
-      return value || "";
+      return value ? value.replace(/\n/g, "\\n") : "";
     });
 
     return { ...node, data: JSON.parse(parsedData) };

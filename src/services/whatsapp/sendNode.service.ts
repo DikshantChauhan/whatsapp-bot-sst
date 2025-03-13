@@ -5,7 +5,7 @@ import { User } from "../../db/user.db";
 import { userService } from "../db/user.service";
 import WalkFlowService from "../walkFlow/walkFlow.service";
 import { flowService } from "../db/flow.service";
-import { getStartNode } from "../../utils";
+import { getDataFromWhatsappOwnboaringLink, getStartNode } from "../../utils";
 import { nudgeService } from "../db/nudge.service";
 import { FlowType } from "../../db/flow.db";
 import { Campaign } from "../../db/campaign.db";
@@ -239,13 +239,30 @@ class SendNodesService extends WhatsappMessages {
     async (node) => {
       const { name, level_id, node_id, age } = node.data;
       await this.updateUser({
-        ...this.user,
         ...(name ? { name } : {}),
         ...(level_id ? { level_id } : {}),
         ...(node_id ? { node_id } : {}),
         ...(age ? { age: Number(age) } : {}),
       });
       await this.logAndUpdateUserAfterLevelWalk(node);
+    };
+
+  protected sendLevelWhatsappOwnboardingLinkParserNode: SendNodeHandler<AppNodeKey.WHATSAPP_OWNBOARDING_LINK_PARSER_NODE_KEY> =
+    async (node) => {
+      const meta = getDataFromWhatsappOwnboaringLink(node.data.link);
+      await this.updateUser({
+        node_meta: {
+          ...(this.user.node_meta || {}),
+          whatsapp_ownboarding_link: meta,
+        },
+      });
+    };
+
+  protected sendLevelWhatsappConfirmSchoolNode: SendNodeHandler<AppNodeKey.WHATSAPP_CONFIRM_SCHOOL_NODE_KEY> =
+    async (node) => {
+      const { text, paths } = node.data;
+      await this.sendButtonMessage(this.user.phone_number, text, paths);
+      await this.updateUserAfterLevelWalk(node);
     };
 }
 

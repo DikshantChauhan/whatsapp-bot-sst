@@ -30,6 +30,15 @@ const userEntitySchema = schema({
   node_meta: map({
     delay_wait_till_unix: number().optional(),
     prompt_input: string().optional(),
+    whatsapp_ownboarding_link: map({
+      school_name: string().optional(),
+      dise_code: string().optional(),
+      district_id: string().optional(),
+      district_name: string().optional(),
+      state_name: string().optional(),
+    })
+      .optional()
+      .default({}),
   })
     .optional()
     .default({}),
