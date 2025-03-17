@@ -12,13 +12,10 @@ class VariableParserService {
       ...map,
       user: {
         ...map.user,
-        level_score: `${Object.values(map.user.level_score).reduce(
+        level_score: `${Object.values(map.user.current_level_score).reduce(
           (pre, curr) => (pre || 0) + (curr || 0),
           0
-        )}/${Object.keys(map.user.level_score).length}`,
-      },
-      prompt: {
-        input: map.user.node_meta?.prompt_input,
+        )}/${Object.keys(map.user.current_level_score).length}`,
       },
     };
   };

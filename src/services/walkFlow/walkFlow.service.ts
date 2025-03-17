@@ -54,7 +54,10 @@ class WalkFlowService extends NodeHandlerService {
     const startNode = getStartNode(flow)!;
     // ---------------------
 
-    await this.updateUser({ level_id: levelId, node_id: startNode.id });
+    await this.updateUser({
+      current_level_id: levelId,
+      current_node_id: startNode.id,
+    });
   };
 
   private handleCommand = async () => {
@@ -94,6 +97,10 @@ class WalkFlowService extends NodeHandlerService {
         sourceEdges: this.getNodeSourceEdges(currentNode.id),
       });
 
+      console.log({
+        currentNode: { type: currentNode.type, id: currentNode.id },
+        nextNode: { type: nextNode.type, id: nextNode.id },
+      });
       const nextNodeHandlers = nodesHandlerMap[nextNode.type][this.flow.type];
 
       if (!nextNodeHandlers) {

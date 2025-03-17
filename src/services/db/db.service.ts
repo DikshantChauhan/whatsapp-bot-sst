@@ -1,4 +1,5 @@
 import {
+  $remove,
   $set,
   DeleteItemCommand,
   Entity,
@@ -37,20 +38,21 @@ export default class DbService<E extends Entity, T extends Table> {
   }
 
   async update(item: UpdateItemInput<E>) {
-    const transormedItems =
-      typeof item === "object"
-        ? Object.entries(item).reduce((acc, [key, value]) => {
-            if (typeof value === "object") {
-              return { ...acc, [key]: $set(value) };
-            }
+    const transormedItems = Object.entries(item).reduce((acc, [key, value]) => {
+      if (value === undefined) {
+        return { ...acc, [key]: $remove() };
+      }
 
-            return { ...acc, [key]: value };
-          }, {} as UpdateItemInput<E>)
-        : item;
+      if (typeof value === "object") {
+        return { ...acc, [key]: $set(value) };
+      }
+
+      return { ...acc, [key]: value };
+    }, {} as UpdateItemInput<E>);
 
     return await this.entity
       .build(UpdateItemCommand)
-      .item(transormedItems)
+      .item(transormedItems as UpdateItemInput<E>)
       .send();
   }
 

@@ -100,8 +100,8 @@ const handleMessageReply = async (user: User, message: Message) => {
   }
 
   if (input) {
-    const flow = await flowService.getOrFail(user.level_id);
-    const campaign = await campaignService.getOrFail(user.campaign_id);
+    const flow = await flowService.getOrFail(user.current_level_id);
+    const campaign = await campaignService.getOrFail(user.current_campaign_id);
 
     const walkFlow = new WalkFlowService({
       flow,
@@ -109,7 +109,7 @@ const handleMessageReply = async (user: User, message: Message) => {
       campaign,
       chatInput: input,
     });
-    await walkFlow.walk(user.node_id);
+    await walkFlow.walk(user.current_node_id);
   }
 };
 

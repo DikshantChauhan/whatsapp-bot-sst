@@ -25,11 +25,11 @@ class SendNodesService extends WhatsappMessages {
   updateUser = async (payload: Partial<User>) => {
     const maxLevelId =
       payload.max_level_id ||
-      (payload.level_id &&
+      (payload.current_level_id &&
         this.campaign &&
-        this.campaign.levels.indexOf(payload.level_id) >
+        this.campaign.levels.indexOf(payload.current_level_id) >
           this.campaign.levels.indexOf(this.user.max_level_id))
-        ? payload.level_id
+        ? payload.current_level_id
         : this.user.max_level_id;
 
     this.user = await userService.update(this.user.phone_number, {
@@ -41,7 +41,7 @@ class SendNodesService extends WhatsappMessages {
 
   private getNudgeIdFromNode = ({ nudge }: AppNode) => {
     return nudge === "inherit" || !nudge
-      ? this.user.nudge_id
+      ? this.user.current_nudge_id
       : nudge === "none"
       ? undefined
       : nudge;
@@ -74,9 +74,9 @@ class SendNodesService extends WhatsappMessages {
 
     await this.updateUser({
       ...extra,
-      node_id: node.id,
-      nudge_id: nudgeId,
-      level_id: this.flow.id,
+      current_node_id: node.id,
+      current_nudge_id: nudgeId,
+      current_level_id: this.flow.id,
     });
 
     await this.handleLevelNodeNudge(nudgeId);
@@ -108,7 +108,7 @@ class SendNodesService extends WhatsappMessages {
     };
 
   private setLevelDelayNodeMetaOrFail = async (node: DelayNode) => {
-    if (this.user.node_meta?.delay_wait_till_unix) {
+    if (this.user.delay_wait_till_unix) {
       // throw new Error(
       //   `Delay wait till already set for user: ${this.user.phone_number}`
       // );
@@ -117,10 +117,7 @@ class SendNodesService extends WhatsappMessages {
 
     const { delayInSecs } = node.data;
     await this.updateUser({
-      node_meta: {
-        ...(this.user.node_meta || {}),
-        delay_wait_till_unix: Date.now() + delayInSecs * 1000,
-      },
+      delay_wait_till_unix: Date.now() + delayInSecs * 1000,
     });
   };
 
@@ -168,7 +165,9 @@ class SendNodesService extends WhatsappMessages {
 
   protected sendLevelStartNode: SendNodeHandler<AppNodeKey.START_NODE_KEY> =
     async (node) => {
-      await this.updateUserAfterLevelWalk(node);
+      await this.updateUserAfterLevelWalk(node, {
+        current_level_score: {},
+      });
     };
 
   protected sendNudgeStartNode: SendNodeHandler<AppNodeKey.START_NODE_KEY> =
@@ -250,12 +249,7 @@ class SendNodesService extends WhatsappMessages {
   protected sendLevelWhatsappOwnboardingLinkParserNode: SendNodeHandler<AppNodeKey.WHATSAPP_OWNBOARDING_LINK_PARSER_NODE_KEY> =
     async (node) => {
       const meta = getDataFromWhatsappOwnboaringLink(node.data.link);
-      await this.updateUser({
-        node_meta: {
-          ...(this.user.node_meta || {}),
-          whatsapp_ownboarding_link: meta,
-        },
-      });
+      await this.updateUser(meta);
     };
 
   protected sendLevelWhatsappConfirmSchoolNode: SendNodeHandler<AppNodeKey.WHATSAPP_CONFIRM_SCHOOL_NODE_KEY> =

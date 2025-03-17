@@ -67,22 +67,26 @@ export const getDefaultUser = async (
   return {
     phone_number,
     name,
-    level_id: startLevelId,
-    node_id: startNode.id,
-    nudge_id: "ac71a954-d39f-4ca2-a599-2bd9c15217eb",
+    current_level_id: startLevelId,
+    current_node_id: "8ha4d",
+    current_nudge_id: undefined,
     session_expires_at: Date.now() + 1000 * 60 * 60 * 24,
-    campaign_id: campaign_Id,
-    level_score: {},
+    current_campaign_id: campaign_Id,
+    current_level_score: {},
     total_score: 0,
-    node_meta: {},
     age: undefined,
     max_level_id: startLevelId,
   };
 };
 
-export const getDataFromWhatsappOwnboaringLink = (
-  str: string
-): Record<string, string> => {
+export const getDataFromWhatsappOwnboaringLink = (str: string) => {
+  enum LinkKeyMap {
+    "School name" = "whatsapp_ownboarding_school_name",
+    "Dise code" = "whatsapp_ownboarding_dise_code",
+    "District iD" = "whatsapp_ownboarding_district_id",
+    "District name" = "whatsapp_ownboarding_district_name",
+    "State name" = "whatsapp_ownboarding_state_name",
+  }
   const metadata: Record<string, string> = {};
   const regex = /\*([^:]+):\s*([^*]+)\*/g;
   let match: RegExpExecArray | null;
@@ -90,8 +94,10 @@ export const getDataFromWhatsappOwnboaringLink = (
   while ((match = regex.exec(str)) !== null) {
     const key = match[1]?.trim() ?? "";
     const value = match[2]?.trim() ?? "";
-    if (key) metadata[key] = value;
+
+    const userKey = LinkKeyMap[key as keyof typeof LinkKeyMap];
+    if (userKey) metadata[userKey] = value;
   }
 
-  return metadata;
+  return metadata as Record<LinkKeyMap, string | undefined>;
 };
