@@ -107,29 +107,17 @@ class SendNodesService extends WhatsappMessages {
       await this.sendTextMessage(this.user.phone_number, text);
     };
 
-  private setLevelDelayNodeMetaOrFail = async (node: DelayNode) => {
-    if (this.user.delay_wait_till_unix) {
-      // throw new Error(
-      //   `Delay wait till already set for user: ${this.user.phone_number}`
-      // );
-      return;
-    }
-
-    const { delayInSecs } = node.data;
-    await this.updateUser({
-      delay_wait_till_unix: Date.now() + delayInSecs * 1000,
-    });
-  };
-
   protected sendLevelDelayNode: SendNodeHandler<AppNodeKey.DELAY_NODE_KEY> =
     async (node) => {
-      const { message } = node.data;
-
-      await this.setLevelDelayNodeMetaOrFail(node);
-
-      message && (await this.sendTextMessage(this.user.phone_number, message));
-
-      await this.updateUserAfterLevelWalk(node);
+      const { delayInSecs, message } = node.data;
+      if (this.user.delay_wait_till_unix) {
+        message &&
+          (await this.sendTextMessage(this.user.phone_number, message));
+        return;
+      }
+      await this.updateUserAfterLevelWalk(node, {
+        delay_wait_till_unix: Date.now() + delayInSecs * 1000,
+      });
     };
 
   protected sendNudgeDelayNode: SendNodeHandler<AppNodeKey.DELAY_NODE_KEY> =
@@ -140,7 +128,7 @@ class SendNodesService extends WhatsappMessages {
 
       await nudgeService.create({
         node_id: node.id,
-        nudge_id: this.flow.id,
+        nudge_id: this.flow.id, 
         reminder_time_unix: Date.now() + delayInSecs * 1000,
         user_id: this.user.phone_number,
       });
@@ -236,12 +224,16 @@ class SendNodesService extends WhatsappMessages {
 
   protected sendLevelWhatsappUserUpdateNode: SendNodeHandler<AppNodeKey.WHATSAPP_USER_UPDATE_NODE_KEY> =
     async (node) => {
-      const { name, level_id, node_id, age } = node.data;
+      const { name, level_id, node_id, age, whatsapp_ownboarding_dise_code } =
+        node.data;
       await this.updateUser({
         ...(name ? { name } : {}),
         ...(level_id ? { level_id } : {}),
         ...(node_id ? { node_id } : {}),
         ...(age ? { age: Number(age) } : {}),
+        ...(whatsapp_ownboarding_dise_code
+          ? { whatsapp_ownboarding_dise_code }
+          : {}),
       });
       await this.logAndUpdateUserAfterLevelWalk(node);
     };

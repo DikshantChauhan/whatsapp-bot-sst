@@ -68,13 +68,11 @@ export const getDefaultUser = async (
     phone_number,
     name,
     current_level_id: startLevelId,
-    current_node_id: "8ha4d",
-    current_nudge_id: undefined,
+    current_node_id: startNode.id,
     session_expires_at: Date.now() + 1000 * 60 * 60 * 24,
     current_campaign_id: campaign_Id,
     current_level_score: {},
     total_score: 0,
-    age: undefined,
     max_level_id: startLevelId,
   };
 };
@@ -100,4 +98,22 @@ export const getDataFromWhatsappOwnboaringLink = (str: string) => {
   }
 
   return metadata as Record<LinkKeyMap, string | undefined>;
+};
+
+export interface SchoolAPIResponse {
+  code: string;
+  name: string;
+  state: string;
+  district: string;
+  block: string;
+  type: string;
+  students: string;
+  link: string;
+}
+
+export const fetchSchoolAPI = async (diseCode: string) => {
+  const url = `https://codeyogi-colleges-prod.s3.amazonaws.com/colleges/${diseCode}.json`;
+  const response = await fetch(url);
+  const data = await response.json();
+  return data as SchoolAPIResponse;
 };

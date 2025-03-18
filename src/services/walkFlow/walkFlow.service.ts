@@ -1,9 +1,11 @@
-import { Flow } from "./typings";
+import { AppNode, Flow } from "./typings";
 import NodeHandlerService from "./nodeHandler.service";
 import { Campaign } from "../../db/campaign.db";
 import { User } from "../../db/user.db";
 import { flowService } from "../db/flow.service";
 import { getStartNode } from "../../utils";
+import { userService } from "../db/user.service";
+import { nudgeService } from "../db/nudge.service";
 
 class WalkFlowService extends NodeHandlerService {
   constructor(payload: {
@@ -14,10 +16,6 @@ class WalkFlowService extends NodeHandlerService {
   }) {
     super(payload);
   }
-
-  private isCommandCase = () => {
-    return this.flow.type === "level" && this.chatInput!.startsWith("/");
-  };
 
   private helpCommandHandler = async (_: string) => {
     await this.sendTextMessage(
@@ -60,24 +58,36 @@ class WalkFlowService extends NodeHandlerService {
     });
   };
 
-  private handleCommand = async () => {
-    const command = this.chatInput!.slice(1);
+  private cleanCommandHandler = async (_: string) => {
+    const userId = this.user.phone_number;
+    await userService.delete(userId);
+    await nudgeService.deleteByUserId(userId);
 
-    const map = [
-      { match: "help", handler: this.helpCommandHandler },
-      { match: "levels", handler: this.levelsCommandHandler },
-      { match: /^level-\d+$/, handler: this.levelCommandHandler },
-    ];
+    await this.sendTextMessage(
+      this.user.phone_number,
+      "Your account data has been deleted."
+    );
+  };
 
-    map.forEach(({ match, handler }) => {
+  private commandHandlerMap = [
+    { match: "help", handler: this.helpCommandHandler },
+    { match: "levels", handler: this.levelsCommandHandler },
+    { match: /^level-\d+$/, handler: this.levelCommandHandler },
+    { match: "clean", handler: this.cleanCommandHandler },
+  ];
+
+  private getCommandHandler = (chatInput: string) => {
+    const command = chatInput.slice(1);
+    return this.commandHandlerMap.find(({ match }) => {
       const pattern = new RegExp(match);
-      pattern.exec(command) && handler(command);
+      return pattern.test(command);
     });
   };
 
   walk = async (currentNodeId: string) => {
-    if (this.isCommandCase()) {
-      await this.handleCommand();
+    const commandHandler = this.getCommandHandler(this.chatInput!);
+    if (commandHandler) {
+      await commandHandler.handler(this.chatInput!);
       return;
     }
 
@@ -92,10 +102,19 @@ class WalkFlowService extends NodeHandlerService {
         throw new Error(`type: ${currentNode.type}, handlers not found!`);
       }
 
-      const nextNode = await getNextNode({
-        currentNode,
-        sourceEdges: this.getNodeSourceEdges(currentNode.id),
-      });
+      let nextNode: AppNode;
+      try {
+        nextNode = await getNextNode({
+          currentNode,
+          sourceEdges: this.getNodeSourceEdges(currentNode.id),
+        });
+      } catch (error) {
+        await this.sendTextMessage(this.user.phone_number, String(error));
+        const sendCurrentNode =
+          nodesHandlerMap[currentNode.type][this.flow.type]?.sendNode;
+        await sendCurrentNode?.(currentNode);
+        break;
+      }
 
       console.log({
         currentNode: { type: currentNode.type, id: currentNode.id },

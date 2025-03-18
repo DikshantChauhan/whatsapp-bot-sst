@@ -61,6 +61,10 @@ class UserService {
   async getOrFail(phone_number: string): Promise<User> {
     return await this.getOrFail(phone_number);
   }
+
+  async delete(phone_number: string): Promise<void> {
+    await this.db.delete({ phone_number });
+  }
 }
 
 export const userService = new UserService();

@@ -69,7 +69,14 @@ export type MessageNode = BaseNode<
 
 export type StartNode = BaseNode<AppNodeKey.START_NODE_KEY, {}>;
 
-export type PromptNode = BaseNode<AppNodeKey.PROMPT_NODE_KEY, {}>;
+export type PromptNode = BaseNode<
+  AppNodeKey.PROMPT_NODE_KEY,
+  {
+    type: "text" | "number";
+    min?: number;
+    max?: number;
+  }
+>;
 
 interface MessageHeader {
   type: "text" | "image" | "video" | "document";
@@ -133,6 +140,7 @@ export type WhatsappUserUpdateNode = BaseNode<
     level_id?: string;
     node_id?: string;
     age?: string;
+    whatsapp_ownboarding_dise_code?: string;
   }
 >;
 
@@ -147,7 +155,6 @@ export type WhatsappOwnboardingLinkParserNode = BaseNode<
 export type WhatsappValidateDiseCodeNode = BaseNode<
   AppNodeKey.WHATSAPP_VALIDATE_DISE_CODE_NODE_KEY,
   {
-    diseCode: string;
     paths: ["valid", "invalid"];
   }
 >;
@@ -156,7 +163,7 @@ export type WhatsappConfirmSchoolNode = BaseNode<
   AppNodeKey.WHATSAPP_CONFIRM_SCHOOL_NODE_KEY,
   {
     text: string;
-    paths: ["No", "Ok"];
+    paths: ["No", "Confirm"];
   }
 >;
 

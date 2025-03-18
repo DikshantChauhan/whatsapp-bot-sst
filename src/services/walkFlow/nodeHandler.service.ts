@@ -4,7 +4,12 @@ import { campaignService } from "../db/campaign.service";
 import { flowService } from "../db/flow.service";
 import { Campaign } from "../../db/campaign.db";
 import SendNodesService from "../whatsapp/sendNode.service";
-import { getDataFromWhatsappOwnboaringLink, getStartNode } from "../../utils";
+import {
+  fetchSchoolAPI,
+  getDataFromWhatsappOwnboaringLink,
+  getStartNode,
+  SchoolAPIResponse,
+} from "../../utils";
 import { FlowType } from "../../db/flow.db";
 import variableParserService from "./variableParser.service";
 
@@ -41,6 +46,24 @@ class NodeHandlerService extends SendNodesService {
     this.chatInput = payload.chatInput;
   }
 
+  private errorMessageMap = {
+    inputNotFound: "चैट इनपुट नहीं मिला। कृपया दोबारा प्रयास करें।",
+    inputUnderRange: (currentInput: string, min: number) =>
+      `इनपुट संख्या बहुत छोटी है। आपका इनपुट: ${currentInput}, न्यूनतम आवश्यक: ${min}`,
+    inputOverRange: (currentInput: string, max: number) =>
+      `इनपुट संख्या बहुत बड़ी है। आपका इनपुट: ${currentInput}, अधिकतम अनुमति: ${max}`,
+    inputNoMatchingOptionFound: (currentInput: string) =>
+      `कोई मिलता विकल्प नहीं मिला। आपका इनपुट: ${currentInput}`,
+    inputNumberRequired: (currentInput: string) =>
+      `कृपया केवल संख्या दर्ज करें। आपका इनपुट: ${currentInput}`,
+    nextNodeNotFound: (nodeId: string, flowId: string) =>
+      `अगला कदम नहीं मिला। नोड आईडी: ${nodeId}, फ्लो आईडी: ${flowId}`,
+    nodeNotFound: (nodeId: string) => `नोड नहीं मिला। नोड आईडी: ${nodeId}`,
+    edgeNotFound: (nodeId: string, sourceHandleIndex: string) =>
+      `कनेक्शन नहीं मिला। नोड आईडी: ${nodeId}, स्रोत हैंडल: ${sourceHandleIndex}`,
+    diseCodeNotFound: "उपयोगकर्ता का DISE कोड नहीं मिला। कृपया जांच करें।",
+  };
+
   getOrFetchCampaign = async (): Promise<Campaign> => {
     if (this.campaign) return this.campaign;
     this.campaign = await campaignService.getOrFail(
@@ -62,7 +85,7 @@ class NodeHandlerService extends SendNodesService {
 
   public getNodeByIdOrFail = (id: string): AppNode => {
     const node = this.getNodeById(id);
-    if (!node) throw new Error(`No node found for id: ${id}`);
+    if (!node) throw new Error(this.errorMessageMap.nodeNotFound(id));
     return node;
   };
 
@@ -83,7 +106,7 @@ class NodeHandlerService extends SendNodesService {
     );
     if (!edge)
       throw new Error(
-        `No edge found for ${node.type} node id: ${node.id} with sourceHandleIndex: ${sourceHandleIndex}`
+        this.errorMessageMap.edgeNotFound(node.id, sourceHandleIndex)
       );
     return edge;
   };
@@ -111,23 +134,20 @@ class NodeHandlerService extends SendNodesService {
 
     if (!edge)
       throw new Error(
-        `No edge found for ${currentNode.type} id: ${currentNode.id} with edgeIndex: ${edgeIndex}`
+        this.errorMessageMap.edgeNotFound(currentNode.id, edgeIndex.toString())
       );
 
     return this.getNodeByIdOrFail(edge.target);
   };
 
-  public getChatInputOrFail = (currentNode: AppNode): string => {
-    if (!this.chatInput)
-      throw new Error(
-        `No chat input found for ${currentNode.type} id: ${currentNode.id}`
-      );
+  public getChatInputOrFail = (): string => {
+    if (!this.chatInput) throw new Error(this.errorMessageMap.inputNotFound);
     return this.chatInput;
   };
 
   private ifElseNodeHandler: GetNextNodeHandler<AppNodeKey.IF_ELSE_NODE_KEY> =
     async ({ currentNode, sourceEdges }) => {
-      const chatInput = this.getChatInputOrFail(currentNode);
+      const chatInput = this.getChatInputOrFail();
 
       const { conditions } = currentNode.data;
       let matchingIndex = conditions.findIndex((condition) =>
@@ -161,6 +181,32 @@ class NodeHandlerService extends SendNodesService {
 
   private promptNodeHandler: GetNextNodeHandler<AppNodeKey.PROMPT_NODE_KEY> =
     async ({ currentNode, sourceEdges }) => {
+      const { type, max, min } = currentNode.data;
+
+      if (!this.chatInput) {
+        throw new Error(this.errorMessageMap.inputNotFound);
+      }
+
+      if (type === "number") {
+        const isNumber = !isNaN(parseInt(this.chatInput));
+
+        if (!isNumber) {
+          throw new Error(
+            this.errorMessageMap.inputNumberRequired(this.chatInput)
+          );
+        }
+
+        if (max && this.chatInput.length > max) {
+          throw new Error(
+            this.errorMessageMap.inputOverRange(this.chatInput, max)
+          );
+        }
+        if (min && this.chatInput.length < min) {
+          throw new Error(
+            this.errorMessageMap.inputUnderRange(this.chatInput, min)
+          );
+        }
+      }
       await this.updateUser({
         prompt_input: this.chatInput,
       });
@@ -170,14 +216,15 @@ class NodeHandlerService extends SendNodesService {
 
   private whatsappButtonNodeHandler: GetNextNodeHandler<AppNodeKey.WHATSAPP_BUTTON_NODE_KEY> =
     async ({ currentNode, sourceEdges }) => {
-      const chatInput = this.getChatInputOrFail(currentNode);
+      const chatInput = this.getChatInputOrFail();
       const { buttons } = currentNode.data;
 
       const matchingIndex = buttons.findIndex((option) => option === chatInput);
 
       if (matchingIndex === -1) {
-        //No matching option found
-        return currentNode;
+        throw new Error(
+          this.errorMessageMap.inputNoMatchingOptionFound(chatInput)
+        );
       }
 
       return this.getNodeBySourceHandleOrFail(
@@ -197,7 +244,9 @@ class NodeHandlerService extends SendNodesService {
       const nextLevelId = campaign.levels[currentLevelIndex + 1];
 
       if (!nextLevelId) {
-        return currentNode;
+        throw new Error(
+          this.errorMessageMap.nextNodeNotFound(currentNode.id, this.flow.id)
+        );
       }
 
       //update the flow for next level
@@ -206,7 +255,7 @@ class NodeHandlerService extends SendNodesService {
 
       if (!nextStartNode)
         throw new Error(
-          `No next node found after end node id: ${currentNode.id} with new flow-id: ${nextLevelId}`
+          this.errorMessageMap.nextNodeNotFound(currentNode.id, nextLevelId)
         );
 
       return nextStartNode;
@@ -251,14 +300,15 @@ class NodeHandlerService extends SendNodesService {
 
   private whatsappListNodeHandler: GetNextNodeHandler<AppNodeKey.WHATSAPP_LIST_NODE_KEY> =
     async ({ currentNode, sourceEdges }) => {
-      const chatInput = this.getChatInputOrFail(currentNode);
+      const chatInput = this.getChatInputOrFail();
       const { buttons, correctIndex } = currentNode.data;
 
       const matchingIndex = buttons.findIndex((option) => option === chatInput);
 
       if (matchingIndex === -1) {
-        //No matching option found
-        return currentNode;
+        throw new Error(
+          this.errorMessageMap.inputNoMatchingOptionFound(chatInput)
+        );
       }
 
       //update the user score
@@ -319,6 +369,14 @@ class NodeHandlerService extends SendNodesService {
         selectedPath = "unknown";
       }
 
+      await this.updateUser({
+        whatsapp_ownboarding_district_id,
+        whatsapp_ownboarding_district_name,
+        whatsapp_ownboarding_state_name,
+        whatsapp_ownboarding_dise_code,
+        whatsapp_ownboarding_school_name,
+      });
+
       return this.getNodeBySourceHandleOrFail(
         sourceEdges,
         currentNode,
@@ -328,33 +386,42 @@ class NodeHandlerService extends SendNodesService {
 
   private levelWhatsappValidateDiseCodeNodeHandler: GetNextNodeHandler<AppNodeKey.WHATSAPP_VALIDATE_DISE_CODE_NODE_KEY> =
     async ({ currentNode, sourceEdges }) => {
-      const { diseCode, paths } = currentNode.data;
+      const { paths } = currentNode.data;
 
-      //
+      let school: SchoolAPIResponse | undefined;
+      try {
+        if (!this.user.whatsapp_ownboarding_dise_code) {
+          throw new Error(this.errorMessageMap.diseCodeNotFound);
+        }
 
-      //call api with meta and diseCode and set school name
-      const schoolName = "SGRR public school";
-      schoolName &&
-        (await this.updateUser({
-          whatsapp_ownboarding_school_name: schoolName,
-          whatsapp_ownboarding_dise_code: diseCode,
-        }));
+        school = await fetchSchoolAPI(this.user.whatsapp_ownboarding_dise_code);
+
+        await this.updateUser({
+          whatsapp_ownboarding_school_name: school.name,
+          whatsapp_ownboarding_dise_code: school.code,
+        });
+      } catch (error) {
+        console.error(error);
+      }
 
       return this.getNodeBySourceHandleOrFail(
         sourceEdges,
         currentNode,
-        paths.indexOf(schoolName ? "valid" : "invalid").toString()
+        paths.indexOf(school ? "valid" : "invalid").toString()
       );
     };
 
   private levelWhatsappConfirmSchoolNodeHandler: GetNextNodeHandler<AppNodeKey.WHATSAPP_CONFIRM_SCHOOL_NODE_KEY> =
     async ({ currentNode, sourceEdges }) => {
       const { paths } = currentNode.data;
-      const matchingIndex = paths.findIndex((path) => path === this.chatInput);
+      const chatInput = this.getChatInputOrFail();
+      const matchingIndex = paths.findIndex((path) => path === chatInput);
 
       if (matchingIndex === -1) {
         //No matching option found
-        return currentNode;
+        throw new Error(
+          this.errorMessageMap.inputNoMatchingOptionFound(chatInput)
+        );
       }
 
       return this.getNodeBySourceHandleOrFail(
