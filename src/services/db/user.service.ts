@@ -59,7 +59,11 @@ class UserService {
   }
 
   async getOrFail(phone_number: string): Promise<User> {
-    return await this.getOrFail(phone_number);
+    const user = await this.get(phone_number);
+    if (!user) {
+      throw new Error(`User not found for phone number: ${phone_number}`);
+    }
+    return user;
   }
 
   async delete(phone_number: string): Promise<void> {

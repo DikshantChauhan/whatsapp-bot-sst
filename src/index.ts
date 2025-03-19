@@ -40,5 +40,6 @@ app.post("/create-nudge-seed", miscController.createNudgeSeedHandler);
 app.get("/scan-all-nudges", miscController.scanAllNudgesHandler);
 app.post("/get-past-nudges", miscController.getPastNudgesHandler);
 app.delete("/delete-all-nudges", miscController.deleteAllNudgesHandler);
+app.get("/cron-nudge", miscController.nudgeHandler);
 
 export const handler = serverless(app);

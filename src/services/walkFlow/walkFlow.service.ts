@@ -85,7 +85,8 @@ class WalkFlowService extends NodeHandlerService {
   };
 
   walk = async (currentNodeId: string) => {
-    const commandHandler = this.getCommandHandler(this.chatInput!);
+    const commandHandler =
+      this.chatInput && this.getCommandHandler(this.chatInput);
     if (commandHandler) {
       await commandHandler.handler(this.chatInput!);
       return;

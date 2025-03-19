@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { flowService } from "../services/db/flow.service";
 import { errorResponse, successResponse } from "../utils";
 import { FlowType } from "../db/flow.db";
+import { z } from "zod";
 
 export default {
   async postFlow(request: Request, response: Response) {
@@ -15,6 +16,12 @@ export default {
       const payload = await flowService
         .createPayloadSchema()
         .parseAsync(flow_data);
+      await z
+        .object({
+          campaign_id: z.string().optional(),
+          level_number: z.number().optional(),
+        })
+        .parseAsync({ campaign_id, level_number });
 
       if (payload.type === "level" && (!campaign_id || !level_number)) {
         return errorResponse(

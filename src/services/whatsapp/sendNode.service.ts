@@ -1,6 +1,6 @@
 import WhatsappMessages from "./messages.service";
 import { SendNodeHandler } from "../walkFlow/nodeHandler.service";
-import { AppNode, AppNodeKey, DelayNode, Flow } from "../walkFlow/typings";
+import { AppNode, AppNodeKey, Flow } from "../walkFlow/typings";
 import { User } from "../../db/user.db";
 import { userService } from "../db/user.service";
 import WalkFlowService from "../walkFlow/walkFlow.service";
