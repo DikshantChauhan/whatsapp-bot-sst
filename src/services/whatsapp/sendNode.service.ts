@@ -122,9 +122,7 @@ class SendNodesService extends WhatsappMessages {
 
   protected sendNudgeDelayNode: SendNodeHandler<AppNodeKey.DELAY_NODE_KEY> =
     async (node) => {
-      const { message, delayInSecs } = node.data;
-
-      message && (await this.sendTextMessage(this.user.phone_number, message));
+      const { delayInSecs } = node.data;
 
       await nudgeService.create({
         node_id: node.id,
