@@ -1,10 +1,15 @@
-import { WHATSAPP_API_BASE_URL, PHONE_NUMBER_ID } from "./constants";
+import {
+  WHATSAPP_API_BASE_URL,
+  PHONE_NUMBER_ID,
+  ADMIN_PHONE_NUMBERS,
+} from "./constants";
 import { Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 import { User } from "./db/user.db";
 import { campaignService } from "./services/db/campaign.service";
 import { flowService } from "./services/db/flow.service";
 import { AppNode, AppNodeKey, Flow } from "./services/walkFlow/typings";
+
 export const getWhatsAppBaseURL = () => {
   return `${WHATSAPP_API_BASE_URL}/${PHONE_NUMBER_ID}/messages`;
 };
@@ -117,4 +122,8 @@ export const fetchSchoolAPI = async (diseCode: string) => {
   const response = await fetch(url);
   const data = await response.json();
   return data as SchoolAPIResponse;
+};
+
+export const isAdmin = (user: User) => {
+  return ADMIN_PHONE_NUMBERS.includes(user.phone_number);
 };

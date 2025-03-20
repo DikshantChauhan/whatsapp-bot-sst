@@ -3,7 +3,7 @@ import NodeHandlerService from "./nodeHandler.service";
 import { Campaign } from "../../db/campaign.db";
 import { User } from "../../db/user.db";
 import { flowService } from "../db/flow.service";
-import { getStartNode } from "../../utils";
+import { getStartNode, isAdmin } from "../../utils";
 import { userService } from "../db/user.service";
 import { nudgeService } from "../db/nudge.service";
 
@@ -70,15 +70,24 @@ class WalkFlowService extends NodeHandlerService {
   };
 
   private commandHandlerMap = [
-    { match: "help", handler: this.helpCommandHandler },
-    { match: "levels", handler: this.levelsCommandHandler },
-    { match: /^level-\d+$/, handler: this.levelCommandHandler },
-    { match: "clean", handler: this.cleanCommandHandler },
+    { match: "help", handler: this.helpCommandHandler, adminOnly: false },
+    { match: "levels", handler: this.levelsCommandHandler, adminOnly: false },
+    {
+      match: /^level-\d+$/,
+      handler: this.levelCommandHandler,
+      adminOnly: false,
+    },
+    { match: "clean", handler: this.cleanCommandHandler, adminOnly: true },
   ];
 
   private getCommandHandler = (chatInput: string) => {
     const command = chatInput.slice(1);
-    return this.commandHandlerMap.find(({ match }) => {
+
+    return this.commandHandlerMap.find(({ match, adminOnly }) => {
+      if (adminOnly && !isAdmin(this.user)) {
+        return false;
+      }
+
       const pattern = new RegExp(match);
       return pattern.test(command);
     });

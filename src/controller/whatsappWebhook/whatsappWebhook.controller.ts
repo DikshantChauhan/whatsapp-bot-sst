@@ -3,7 +3,7 @@ import { Message, WhatsAppWebhookPayload } from "./webhook.typings";
 import { userService } from "../../services/db/user.service";
 import { whatsappMessagesService } from "../../services/whatsapp/messages.service";
 import { User } from "../../db/user.db";
-import { getDefaultUser } from "../../utils";
+import { getDefaultUser, isAdmin } from "../../utils";
 import { flowService } from "../../services/db/flow.service";
 import WalkFlowService from "../../services/walkFlow/walkFlow.service";
 import { campaignService } from "../../services/db/campaign.service";
@@ -29,6 +29,7 @@ const handleMessageReply = async (user: User, message: Message) => {
     case "audio":
       const audioId = message.audio?.id;
       audioId &&
+        isAdmin(user) &&
         (await whatsappMessagesService.sendMediaMessage(
           user.phone_number,
           "audio",
@@ -41,6 +42,7 @@ const handleMessageReply = async (user: User, message: Message) => {
     case "image":
       const imageId = message.image?.id;
       imageId &&
+        isAdmin(user) &&
         (await whatsappMessagesService.sendMediaMessage(
           user.phone_number,
           "image",
@@ -53,6 +55,7 @@ const handleMessageReply = async (user: User, message: Message) => {
     case "video":
       const videoId = message.video?.id;
       videoId &&
+        isAdmin(user) &&
         (await whatsappMessagesService.sendMediaMessage(
           user.phone_number,
           "video",
@@ -65,6 +68,7 @@ const handleMessageReply = async (user: User, message: Message) => {
     case "document":
       const documentId = message.document?.id;
       documentId &&
+        isAdmin(user) &&
         (await whatsappMessagesService.sendMediaMessage(
           user.phone_number,
           "document",
