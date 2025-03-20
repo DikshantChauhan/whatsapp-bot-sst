@@ -13,8 +13,14 @@ export default $config({
     const userTable = new sst.aws.Dynamo("whatsapp-bot-dev-user", {
       fields: {
         phone_number: "string",
+        id: "string",
       },
       primaryIndex: { hashKey: "phone_number" },
+      globalIndexes: {
+        byId: {
+          hashKey: "id",
+        },
+      },
     });
 
     const campaignTable = new sst.aws.Dynamo("whatsapp-bot-dev-campaign", {
@@ -41,13 +47,13 @@ export default $config({
       fields: {
         pk: "string",
         sk: "string",
-        user_id: "string",
+        user_phone_number: "string",
         reminder_time_unix: "number",
       },
       primaryIndex: { hashKey: "pk", rangeKey: "sk" },
       globalIndexes: {
-        byUserId: {
-          hashKey: "user_id",
+        byUserPhoneNumber: {
+          hashKey: "user_phone_number",
         },
       },
       localIndexes: {

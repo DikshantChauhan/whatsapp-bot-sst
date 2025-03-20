@@ -33,7 +33,7 @@ const handler = async () => {
       }
 
       const flow = await flowService.getOrFail(nudge.nudge_id);
-      const user = await userService.getOrFail(nudge.user_id);
+      const user = await userService.getOrFail(nudge.user_phone_number);
       const walkFlow = new WalkFlowService({ flow, user });
 
       await walkFlow.walk(nudge.node_id);

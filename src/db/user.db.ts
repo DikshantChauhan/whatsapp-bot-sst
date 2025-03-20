@@ -18,6 +18,15 @@ const table = new Table({
     name: "phone_number",
     type: "string",
   },
+  indexes: {
+    byId: {
+      partitionKey: {
+        name: "id",
+        type: "string",
+      },
+      type: "global",
+    },
+  },
   documentClient,
 });
 
@@ -33,6 +42,8 @@ const userEntitySchema = schema({
   current_level_score: record(string(), number()).default({}),
   max_level_id: string(),
   age: number().optional(),
+  id: string(),
+  english_app_id: string().optional(),
 
   //nodes meta
   delay_wait_till_unix: number().optional(),

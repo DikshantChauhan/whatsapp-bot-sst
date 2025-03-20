@@ -59,12 +59,12 @@ class WalkFlowService extends NodeHandlerService {
   };
 
   private cleanCommandHandler = async (_: string) => {
-    const userId = this.user.phone_number;
-    await userService.delete(userId);
-    await nudgeService.deleteByUserId(userId);
+    const phoneNumber = this.user.phone_number;
+    await userService.delete(phoneNumber);
+    await nudgeService.deleteByUserPhoneNumber(phoneNumber);
 
     await this.sendTextMessage(
-      this.user.phone_number,
+      phoneNumber,
       "Your account data has been deleted."
     );
   };

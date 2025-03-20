@@ -62,7 +62,7 @@ class SendNodesService extends WhatsappMessages {
       return;
     }
 
-    await nudgeService.deleteByUserId(this.user.phone_number);
+    await nudgeService.deleteByUserPhoneNumber(this.user.phone_number);
   };
 
   //keys updated node_id, nudge_id, level_id
@@ -128,9 +128,9 @@ class SendNodesService extends WhatsappMessages {
 
       await nudgeService.create({
         node_id: node.id,
-        nudge_id: this.flow.id, 
+        nudge_id: this.flow.id,
         reminder_time_unix: Date.now() + delayInSecs * 1000,
-        user_id: this.user.phone_number,
+        user_phone_number: this.user.phone_number,
       });
     };
 
@@ -176,7 +176,7 @@ class SendNodesService extends WhatsappMessages {
   ) => {
     const { text } = node.data;
     text && (await this.sendTextMessage(this.user.phone_number, text));
-    await nudgeService.deleteByUserId(this.user.phone_number);
+    await nudgeService.deleteByUserPhoneNumber(this.user.phone_number);
   };
 
   protected sendLevelVideoNode: SendNodeHandler<AppNodeKey.WHATSAPP_VIDEO_NODE_KEY> =

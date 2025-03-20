@@ -132,7 +132,7 @@ const webhookHandler = async (payload: WhatsAppWebhookPayload) => {
   }
 };
 
-const webhook = (req: Request, res: Response) => {
+const webhook = async (req: Request, res: Response) => {
   if (req.method === "GET") {
     const mode = req.query["hub.mode"];
     const token = req.query["hub.verify_token"];
@@ -145,7 +145,7 @@ const webhook = (req: Request, res: Response) => {
       res.sendStatus(403);
     }
   } else if (req.method === "POST") {
-    webhookHandler(req.body);
+    await webhookHandler(req.body);
     res.status(200).send();
   }
 };

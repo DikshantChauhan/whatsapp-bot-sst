@@ -23,7 +23,7 @@ const testHandler = async (request: Request, response: Response) => {
 const createNudgeSeedHandler = async (_: Request, response: Response) => {
   try {
     const nudges = await nudgeService.create({
-      user_id: "1",
+      user_phone_number: "1",
       reminder_time_unix: 1739988281582,
       node_id: "1",
       nudge_id: "1",
@@ -48,7 +48,9 @@ const deleteAllNudgesHandler = async (_: Request, response: Response) => {
   try {
     const nudges = await nudgeService.scanAll();
     await Promise.all(
-      nudges.map((nudge) => nudgeService.deleteByUserId(nudge.user_id))
+      nudges.map((nudge) =>
+        nudgeService.deleteByUserPhoneNumber(nudge.user_phone_number)
+      )
     );
     return successResponse(response, "All nudges deleted");
   } catch (error) {

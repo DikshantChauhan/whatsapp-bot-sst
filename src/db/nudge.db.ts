@@ -22,9 +22,9 @@ const table = new Table({
     type: "string",
   },
   indexes: {
-    byUserId: {
+    byUserPhoneNumber: {
       partitionKey: {
-        name: "user_id",
+        name: "user_phone_number",
         type: "string",
       },
       type: "global",
@@ -41,7 +41,7 @@ const table = new Table({
 });
 
 const nudgeEntitySchema = schema({
-  user_id: string().key(),
+  user_phone_number: string().key(),
   reminder_time_unix: number().key(),
   nudge_id: string(),
   node_id: string(),
@@ -58,7 +58,8 @@ export const nudgeTableKeyHelper = (reminder_time_unix: number) => {
     pk: `${year}/${month}/${day}`,
     sk: {
       minutes,
-      getSk: (minutes: number, user_id: string) => `${minutes}#${user_id}`,
+      getSk: (minutes: number, user_phone_number: string) =>
+        `${minutes}#${user_phone_number}`,
     },
   };
 
@@ -69,12 +70,12 @@ const nudgeEntity = new Entity({
   table,
   name: TABLE_NAME,
   schema: nudgeEntitySchema,
-  computeKey: ({ reminder_time_unix, user_id }) => {
+  computeKey: ({ reminder_time_unix, user_phone_number }) => {
     const { pk, sk } = nudgeTableKeyHelper(reminder_time_unix);
 
     return {
       pk,
-      sk: sk.getSk(sk.minutes, user_id),
+      sk: sk.getSk(sk.minutes, user_phone_number),
     };
   },
 });

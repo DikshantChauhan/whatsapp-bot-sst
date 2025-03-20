@@ -74,6 +74,7 @@ export const getDefaultUser = async (
     current_level_score: {},
     total_score: 0,
     max_level_id: startLevelId,
+    id: generateDBId(),
   };
 };
 

@@ -6,17 +6,17 @@ class NudgeService {
   db = new DbService(nudgeDb.entity, nudgeDb.table);
 
   async create(payload: Nudge): Promise<Nudge> {
-    await this.deleteByUserId(payload.user_id);
+    await this.deleteByUserPhoneNumber(payload.user_phone_number);
 
     return await this.db.insert(payload);
   }
 
-  async getByUserId(user_id: string): Promise<Nudge[]> {
+  async getByUserPhoneNumber(phone_number: string): Promise<Nudge[]> {
     const result = await this.db.table
       .build(QueryCommand)
       .query({
-        index: "byUserId",
-        partition: user_id,
+        index: "byUserPhoneNumber",
+        partition: phone_number,
       })
       .entities(this.db.entity)
       .send();
@@ -42,17 +42,9 @@ class NudgeService {
     return (result.Items || []) as Nudge[];
   }
 
-  async deleteByUserId(user_id: string): Promise<void> {
-    const nudges = await this.getByUserId(user_id);
+  async deleteByUserPhoneNumber(phone_number: string): Promise<void> {
+    const nudges = await this.getByUserPhoneNumber(phone_number);
     await Promise.all(nudges.map((nudge) => this.db.delete(nudge)));
-  }
-
-  async deleteByUserIdSafe(user_id: string): Promise<void> {
-    try {
-      await this.deleteByUserId(user_id);
-    } catch (error) {
-      console.error(error);
-    }
   }
 
   async scanAll(): Promise<Nudge[]> {

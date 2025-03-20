@@ -1,3 +1,4 @@
+import { QueryCommand } from "dynamodb-toolbox";
 import userDb, { User } from "../../db/user.db";
 import DbService from "./db.service";
 import { z } from "zod";
@@ -34,6 +35,8 @@ class UserService {
       current_level_score: z.record(z.string(), z.number()),
       max_level_id: z.string(),
       age: z.number().optional(),
+      id: z.string(),
+      english_app_id: z.string().optional(),
 
       //nodes meta
       delay_wait_till_unix: z.number().optional(),
@@ -64,6 +67,20 @@ class UserService {
       throw new Error(`User not found for phone number: ${phone_number}`);
     }
     return user;
+  }
+
+  async getById(id: string): Promise<User | undefined> {
+    return (
+      await this.db.table
+        .build(QueryCommand)
+        .query({
+          index: "byId",
+          partition: id,
+        })
+        .options({ limit: 1 })
+        .entities(this.db.entity)
+        .send()
+    ).Items?.[0];
   }
 
   async delete(phone_number: string): Promise<void> {
