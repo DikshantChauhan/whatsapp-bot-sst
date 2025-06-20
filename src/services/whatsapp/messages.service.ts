@@ -1,4 +1,4 @@
-import { WHATSAPP_API_TOKKEN } from "../../constants";
+import { WHATSAPP_API_TOKEN } from "../../constants";
 import { getWhatsAppBaseURL } from "../../utils";
 import ApiService from "../api.service";
 
@@ -61,7 +61,7 @@ interface ListMessage extends BaseMessage {
 
 class WhatsappMessages extends ApiService {
   constructor() {
-    super(getWhatsAppBaseURL(), WHATSAPP_API_TOKKEN);
+    super(getWhatsAppBaseURL(), WHATSAPP_API_TOKEN);
   }
 
   private createBaseMessage(to: string): BaseMessage {

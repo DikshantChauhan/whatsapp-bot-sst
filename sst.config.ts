@@ -69,6 +69,12 @@ export default $config({
       handler: "src/index.handler",
       timeout: "30 seconds",
       link: [userTable, campaignTable, flowTable, nudgeTable],
+      environment: {
+        PHONE_NUMBER_ID: process.env.PHONE_NUMBER_ID || "",
+        ADMIN_PHONE_NUMBERS: process.env.ADMIN_PHONE_NUMBERS || "",
+        WHATSAPP_API_TOKEN: process.env.WHATSAPP_API_TOKEN || "",
+        DEFAULT_CAMPAIGN_ID: process.env.DEFAULT_CAMPAIGN_ID || "",
+      },
     });
 
     api.route("ANY /{proxy+}", lambda.arn);

@@ -2,6 +2,7 @@ import {
   WHATSAPP_API_BASE_URL,
   PHONE_NUMBER_ID,
   ADMIN_PHONE_NUMBERS,
+  DEFAULT_CAMPAIGN_ID,
 } from "./constants";
 import { Response } from "express";
 import { v4 as uuidv4 } from "uuid";
@@ -57,7 +58,7 @@ export const getDefaultUser = async (
   phone_number: string,
   name: string
 ): Promise<User> => {
-  const campaign_Id = "48480b39-eb31-488b-8498-ff276136cef2";
+  const campaign_Id = DEFAULT_CAMPAIGN_ID;
   const campaign = await campaignService.getOrFail(campaign_Id);
   const startLevelId = campaign.levels[0];
 
